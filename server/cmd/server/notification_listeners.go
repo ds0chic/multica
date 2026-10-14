@@ -423,6 +423,15 @@ func notifyIssueSubscribers(
 			continue
 		}
 
+		// An agent moving work along (todo -> in_progress) is routine progress for
+		// every tier: the person already knows they handed the issue over, and
+		// the run's own completion notice reports the outcome. Hand-off statuses
+		// and status changes made by people still notify.
+		if notifType == "status_changed" && e.ActorType == "agent" && !statusIsHandoff {
+			tierSuppressed[subID] = true
+			continue
+		}
+
 		// Delegated subscriptions deliver a narrower event set than direct
 		// ones — see deliverToSubscriber.
 		if !deliverToSubscriber(sub.Reason, notifType, statusIsHandoff) {
