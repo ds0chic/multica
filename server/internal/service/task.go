@@ -2671,6 +2671,46 @@ func (s *TaskService) CancelTasksForIssue(ctx context.Context, issueID pgtype.UU
 	return nil
 }
 
+// CancelQueuedRunsForPreviousAssignee withdraws the previous assignee's
+// ownership runs that have not started yet, after an issue is handed to
+// someone else. Without it the old owner's queued run would still start and
+// both owners would work the issue. Mention-triggered runs and runs already in
+// progress are kept (see CancelQueuedOwnerRunsForIssue).
+func (s *TaskService) CancelQueuedRunsForPreviousAssignee(ctx context.Context, issueID pgtype.UUID, prevType pgtype.Text, prevID pgtype.UUID) error {
+	if !prevType.Valid || !prevID.Valid {
+		return nil
+	}
+	params := db.CancelQueuedOwnerRunsForIssueParams{IssueID: issueID}
+	switch prevType.String {
+	case "agent":
+		params.AgentID = prevID
+	case "squad":
+		params.SquadID = prevID
+	default:
+		return nil
+	}
+	var cancelled []db.AgentTaskQueue
+	if err := s.runInTx(ctx, func(qtx *db.Queries) error {
+		var err error
+		cancelled, err = qtx.CancelQueuedOwnerRunsForIssue(ctx, params)
+		if err != nil {
+			return err
+		}
+		return SettleTerminalTaskState(ctx, qtx, cancelled...)
+	}); err != nil {
+		return err
+	}
+	for _, t := range cancelled {
+		s.captureTaskCancelled(ctx, t)
+		s.broadcastTaskEvent(ctx, protocol.EventTaskCancelled, t)
+	}
+	for _, agentID := range distinctAgentIDs(cancelled) {
+		s.ReconcileAgentStatus(ctx, agentID)
+	}
+	s.notifyTasksFinished(cancelled)
+	return nil
+}
+
 // distinctAgentIDs returns each agent id appearing in the cancelled rows once,
 // preserving first-seen order. Bulk cancellations frequently stop several tasks
 // owned by the same agent; reconciling per distinct agent (rather than per row)
