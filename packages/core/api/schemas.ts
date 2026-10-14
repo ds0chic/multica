@@ -778,6 +778,9 @@ export interface AppConfigResponse {
    * too, so absent must be treated as false (#8296). */
   comment_delete_keep_replies_supported?: boolean;
   server_version?: string;
+  /** Self-host without an email provider: login codes are written to the
+   * backend log instead of being emailed. Absent means "emailed". */
+  verification_code_in_server_log?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -1040,6 +1043,7 @@ export const AppConfigSchema = z.object({
   issue_create_properties_supported: BooleanWithDefaultSchema(false),
   comment_delete_keep_replies_supported: BooleanWithDefaultSchema(false),
   server_version: OptionalStringSchema,
+  verification_code_in_server_log: BooleanWithDefaultSchema(false).optional(),
 }).loose();
 
 export const EMPTY_APP_CONFIG: AppConfigResponse = {

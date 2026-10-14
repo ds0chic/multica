@@ -20,6 +20,7 @@ import {
   InputOTPSlot,
 } from "@multica/ui/components/ui/input-otp";
 import { useAuthStore } from "@multica/core/auth";
+import { useConfigStore } from "@multica/core/config";
 import { workspaceKeys } from "@multica/core/workspace/queries";
 import { api } from "@multica/core/api";
 import type { User } from "@multica/core/types";
@@ -108,6 +109,7 @@ export function LoginPage({
   extra,
 }: LoginPageProps) {
   const { t } = useT("auth");
+  const codeInServerLog = useConfigStore((s) => s.verificationCodeInServerLog);
   const qc = useQueryClient();
   const [step, setStep] = useState<"email" | "code" | "cli_confirm">("email");
   const [email, setEmail] = useState("");
@@ -352,10 +354,14 @@ export function LoginPage({
           <CardHeader className="text-center">
             {logo && <div className="mx-auto mb-4">{logo}</div>}
             <CardTitle className="text-display-sm">
-              {t(($) => $.verify.title)}
+              {codeInServerLog
+                ? t(($) => $.verify.log_title)
+                : t(($) => $.verify.title)}
             </CardTitle>
             <CardDescription>
-              {t(($) => $.verify.description, { email })}
+              {codeInServerLog
+                ? t(($) => $.verify.log_description, { email })
+                : t(($) => $.verify.description, { email })}
             </CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col items-center gap-4">

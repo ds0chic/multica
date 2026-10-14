@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/multica-ai/multica/server/internal/auth"
+	"github.com/multica-ai/multica/server/internal/service"
 	"github.com/multica-ai/multica/server/internal/testutil"
 )
 
@@ -605,5 +606,46 @@ func TestGetConfigDeclaresCommentDeleteKeepsReplies(t *testing.T) {
 	}
 	if raw["comment_delete_keep_replies_supported"] != true {
 		t.Fatalf("comment_delete_keep_replies_supported = %v, want true", raw["comment_delete_keep_replies_supported"])
+	}
+}
+
+// TestGetConfigReportsVerificationCodeInServerLog verifies the login screen is
+// told when codes go to the backend log because no email provider is set, and
+// that the flag stays off once SMTP is configured or on the official cloud.
+func TestGetConfigReportsVerificationCodeInServerLog(t *testing.T) {
+	origEmail := testHandler.EmailService
+	defer func() { testHandler.EmailService = origEmail }()
+
+	getConfig := func() AppConfig {
+		t.Helper()
+		w := httptest.NewRecorder()
+		testHandler.GetConfig(w, httptest.NewRequest(http.MethodGet, "/api/config", nil))
+		var cfg AppConfig
+		if err := json.Unmarshal(w.Body.Bytes(), &cfg); err != nil {
+			t.Fatalf("decode config: %v", err)
+		}
+		return cfg
+	}
+
+	t.Setenv("RESEND_API_KEY", "")
+	t.Setenv("SMTP_HOST", "")
+	t.Setenv("MULTICA_APP_URL", "https://multica.self-hosted.example")
+	t.Setenv("FRONTEND_ORIGIN", "")
+	testHandler.EmailService = service.NewEmailService()
+	if !getConfig().VerificationCodeInServerLog {
+		t.Fatal("verification_code_in_server_log: want true on self-host without email")
+	}
+
+	t.Setenv("MULTICA_APP_URL", "https://multica.ai")
+	if getConfig().VerificationCodeInServerLog {
+		t.Fatal("verification_code_in_server_log: want omitted on official cloud")
+	}
+
+	t.Setenv("MULTICA_APP_URL", "https://multica.self-hosted.example")
+	t.Setenv("SMTP_HOST", "smtp.example.com")
+	t.Setenv("SMTP_FROM_EMAIL", "multica@example.com")
+	testHandler.EmailService = service.NewEmailService()
+	if getConfig().VerificationCodeInServerLog {
+		t.Fatal("verification_code_in_server_log: want false when SMTP is configured")
 	}
 }

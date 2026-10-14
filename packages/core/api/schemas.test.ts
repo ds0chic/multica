@@ -1372,6 +1372,16 @@ describe("AppConfigSchema cdn_signed drift", () => {
     expect(parsed.feature_flags).toEqual({});
   });
 
+  it("reads verification_code_in_server_log and treats absent or malformed as false", () => {
+    expect(
+      AppConfigSchema.parse({ verification_code_in_server_log: true }).verification_code_in_server_log,
+    ).toBe(true);
+    expect(AppConfigSchema.parse({}).verification_code_in_server_log).not.toBe(true);
+    expect(
+      AppConfigSchema.parse({ verification_code_in_server_log: "yes" }).verification_code_in_server_log,
+    ).not.toBe(true);
+  });
+
   it("parses server_version and leaves it undefined when the server omits it", () => {
     expect(AppConfigSchema.parse({ server_version: "1.2.3" }).server_version).toBe("1.2.3");
     expect(AppConfigSchema.parse({}).server_version).toBeUndefined();
