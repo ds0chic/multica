@@ -139,7 +139,24 @@ func runConfigSet(cmd *cobra.Command, args []string) error {
 		storedValue = cfg.WorkspacesRoot
 	}
 	fmt.Fprintf(os.Stderr, "Set %s = %s\n", key, storedValue)
+	if configKeyNeedsDaemonRestart(key) {
+		restart := "multica daemon restart"
+		if profile != "" {
+			restart += " --profile " + profile
+		}
+		fmt.Fprintf(os.Stderr, "A running daemon keeps its old value; run '%s' to apply it.\n", restart)
+	}
 	return nil
+}
+
+// configKeyNeedsDaemonRestart reports whether the daemon reads key only at
+// start-up. app_url and workspace_id are read by the CLI on every invocation.
+func configKeyNeedsDaemonRestart(key string) bool {
+	switch key {
+	case "app_url", "workspace_id":
+		return false
+	}
+	return true
 }
 
 // applyConfigSet mutates cfg in place per (key, value). Split out from
