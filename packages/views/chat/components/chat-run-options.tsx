@@ -51,6 +51,7 @@ export function ChatRunOptions({ agent }: { agent: Agent | null | undefined }) {
   return (
     <>
       <ModelPicker
+        leadingIcon
         runtimeId={runtimeId}
         runtimeOnline={canDiscover}
         value={model}
@@ -58,6 +59,7 @@ export function ChatRunOptions({ agent }: { agent: Agent | null | undefined }) {
       />
       {(levels.length > 0 || thinkingLevel) && (
         <ThinkingPicker
+          leadingIcon
           value={thinkingLevel}
           levels={levels}
           onChange={(next) =>
