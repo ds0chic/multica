@@ -650,15 +650,15 @@
     "groups": {
       "assignments": {
         "label": "Assignations",
-        "description": "Quand une tâche vous est assignée ou retirée"
+        "description": "Quand une tâche vous est assignée ou retirée, ou que vous y êtes abonné"
       },
       "status_changes": {
         "label": "Changements de statut",
-        "description": "Quand une tâche que vous suivez change de statut (à faire, en cours, terminé…)"
+        "description": "Quand une tâche que vous suivez change de statut, ou que toutes les sous-tâches de votre tâche sont terminées"
       },
       "comments": {
         "label": "Commentaires",
-        "description": "Nouveaux commentaires sur les tâches que vous suivez"
+        "description": "Nouveaux commentaires sur les tâches que vous suivez, et réactions à vos commentaires"
       },
       "mentions": {
         "label": "Mentions",
@@ -670,7 +670,7 @@
       },
       "agent_activity": {
         "label": "Activité des agents",
-        "description": "Lorsqu'une exécution d'agent échoue"
+        "description": "Lorsqu'une exécution d'agent échoue ou qu'une création avec un agent se termine"
       }
     },
     "system": {

@@ -170,29 +170,11 @@ func deliverToSubscriber(reason, notifType string, statusIsHandoff bool) bool {
 	return statusIsHandoff
 }
 
-// notifTypeToGroup maps each InboxItemType to a user-configurable preference
-// group. Types not in this map are always delivered (not configurable).
-var notifTypeToGroup = map[string]string{
-	"issue_assigned":     "assignments",
-	"unassigned":         "assignments",
-	"assignee_changed":   "assignments",
-	"status_changed":     "status_changes",
-	"new_comment":        "comments",
-	"mentioned":          "mentions",
-	"priority_changed":   "updates",
-	"start_date_changed": "updates",
-	"due_date_changed":   "updates",
-	"task_completed":     "agent_activity",
-	"task_failed":        "agent_activity",
-	"agent_blocked":      "agent_activity",
-	"agent_completed":    "agent_activity",
-}
-
 // isNotifMuted returns true if the given notification type is muted for a user
 // based on their parsed preferences map.
 func isNotifMuted(prefs map[string]string, notifType string) bool {
-	group, ok := notifTypeToGroup[notifType]
-	if !ok {
+	group := inbox.MuteGroup(notifType)
+	if group == "" {
 		return false // unconfigurable types are always delivered
 	}
 	return prefs[group] == "muted"

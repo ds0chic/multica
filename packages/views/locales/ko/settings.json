@@ -646,15 +646,15 @@
     "groups": {
       "assignments": {
         "label": "할당",
-        "description": "태스크에 할당되거나 할당 해제될 때"
+        "description": "태스크에 할당되거나 할당 해제되거나 팔로우 대상에 추가될 때"
       },
       "status_changes": {
         "label": "상태 변경",
-        "description": "팔로우 중인 태스크의 상태가 바뀔 때(예: 할 일, 진행 중, 완료)"
+        "description": "팔로우 중인 태스크의 상태가 바뀌거나, 내 태스크의 하위 태스크가 모두 완료될 때"
       },
       "comments": {
         "label": "댓글",
-        "description": "팔로우 중인 태스크에 새 댓글이 달릴 때"
+        "description": "팔로우 중인 태스크에 새 댓글이 달리거나 내 댓글에 반응이 달릴 때"
       },
       "mentions": {
         "label": "멘션",
@@ -666,7 +666,7 @@
       },
       "agent_activity": {
         "label": "에이전트 활동",
-        "description": "에이전트 실행이 실패할 때"
+        "description": "에이전트 실행이 실패하거나 에이전트로 생성이 끝날 때"
       }
     },
     "system": {

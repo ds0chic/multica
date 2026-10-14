@@ -92,16 +92,24 @@ WHERE id = $1 AND workspace_id = $2;
 -- name: CreateInboxItem :one
 -- A missing recipient is a quiet skip (pgx.ErrNoRows), not a delivery failure.
 -- Check the insertion snapshot without adding recipient row locks.
+-- mute_group, when set, is the recipient's notification preference group for
+-- this type (inbox.MuteGroup); a member who muted that group is skipped the
+-- same quiet way, whichever code path writes the item.
 INSERT INTO inbox_item (
     workspace_id, recipient_type, recipient_id,
     type, severity, issue_id, title, body,
     actor_type, actor_id, details, id
 )
 SELECT $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, COALESCE(sqlc.narg('id')::uuid, gen_random_uuid())
-WHERE ($2::text = 'member' AND EXISTS (
+WHERE (($2::text = 'member' AND EXISTS (
     SELECT 1 FROM member WHERE workspace_id = $1 AND user_id = $3
 )) OR ($2::text = 'agent' AND EXISTS (
     SELECT 1 FROM agent WHERE workspace_id = $1 AND id = $3
+)))
+AND NOT ($2::text = 'member' AND sqlc.narg('mute_group')::text IS NOT NULL AND EXISTS (
+    SELECT 1 FROM notification_preference np
+    WHERE np.workspace_id = $1 AND np.user_id = $3
+      AND np.preferences ->> sqlc.narg('mute_group')::text = 'muted'
 ))
 RETURNING *;
 

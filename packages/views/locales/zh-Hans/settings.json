@@ -646,15 +646,15 @@
     "groups": {
       "assignments": {
         "label": "分配",
-        "description": "你被分配或取消分配某个任务时"
+        "description": "你被分配、取消分配或被订阅到某个任务时"
       },
       "status_changes": {
         "label": "状态变更",
-        "description": "你订阅的任务状态变化时（例如 todo、in_progress、done）"
+        "description": "你订阅的任务状态变化时，或你负责的任务的子任务全部完成时"
       },
       "comments": {
         "label": "评论",
-        "description": "你订阅的任务有新评论时"
+        "description": "你订阅的任务有新评论时，以及有人对你的评论添加表情反应时"
       },
       "mentions": {
         "label": "提及",
@@ -666,7 +666,7 @@
       },
       "agent_activity": {
         "label": "智能体活动",
-        "description": "智能体运行失败时"
+        "description": "智能体运行失败时，或通过智能体创建任务有结果时"
       }
     },
     "system": {
