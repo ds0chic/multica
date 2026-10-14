@@ -30,13 +30,15 @@ func TestCreateIfEligibleHonorsMutedGroup(t *testing.T) {
 		delivered bool
 	}{
 		{"quick_create_done", false},
-		{"quick_create_failed", false},
 		{"task_failed", false},
 		{"children_done", false},
 		{"reaction_added", false},
 		{"mentioned", true},
 		// Needs the owner to act; not mutable.
 		{"autopilot_paused", true},
+		// Carries the requester's only copy of their prompt; not mutable.
+		{"quick_create_failed", true},
+		{"quick_create_unconfirmed", true},
 	} {
 		t.Run(tc.notifType, func(t *testing.T) {
 			_, inserted, err := inbox.CreateIfEligible(context.Background(), queries, db.CreateInboxItemParams{
