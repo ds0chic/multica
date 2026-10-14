@@ -28,6 +28,7 @@ import { formatDuration } from "../../agents/components/agent-activity-hover-con
 import { failureNeedsAction, isCancelledOutcome, runOutcomeLabel } from "../../agents/components/tabs/task-failure";
 import { TerminateTaskConfirmDialog } from "./terminate-task-confirm-dialog";
 import { TaskStatusIcon } from "./task-status-icon";
+import { RetryWithButton } from "./retry-run-button";
 import { useStatusLabel } from "./task-run-labels";
 import { commentRunOutput, isActiveCommentRun, showCommentRunInHeader, type CommentRun } from "./comment-runs";
 
@@ -220,6 +221,8 @@ export function InlineCommentRun({ run, className, viewState, showIdentity = fal
           ) })}>
           <RotateCcw /><span className={cn(showIdentity && "@max-[32rem]/run:sr-only")}>{t(($) => $.execution_log.retry_task_tooltip)}</span>
         </Button>}
+        {(!hasReply || replacesFailureNotice) && ended && task.issue_id
+          && <RetryWithButton taskId={task.id} agentId={task.agent_id} issueId={task.issue_id} />}
       </div>
       <div className={cn(showIdentity && "pl-8")}>
         {replyTo}

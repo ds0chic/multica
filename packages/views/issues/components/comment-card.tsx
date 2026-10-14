@@ -57,6 +57,7 @@ import { RevisionConflictCompare } from "./revision-conflict-compare";
 import { InlineCommentRun, PlacedInlineCommentRun, useInlineCommentRunState, type InlineCommentRunState } from "./inline-comment-run";
 import { EMPTY_COMMENT_RUNS, isRunFailureNotice, orderThreadWithRuns, type CommentRun, type ThreadRunSlot } from "./comment-runs";
 import { descriptionPreview } from "./description-preview";
+import { RetryWithButton } from "./retry-run-button";
 import { useCommentAnnotations } from "./use-comment-annotations";
 import { useAttachmentVersions } from "./deliverables/attachment-versions";
 import { VersionBadge } from "./deliverables/version-badge";
@@ -306,10 +307,12 @@ function retryableAgentFailureComment(entry: TimelineEntry): entry is TimelineEn
 function TaskCommentRetryButton({
   issueId,
   taskId,
+  agentId,
   className,
 }: {
   issueId: string;
   taskId: string;
+  agentId: string;
   className?: string;
 }) {
   const { t } = useT("issues");
@@ -336,7 +339,7 @@ function TaskCommentRetryButton({
   };
 
   return (
-    <div className={cn("flex", className)}>
+    <div className={cn("flex flex-wrap gap-2", className)}>
       <Button
         type="button"
         size="sm"
@@ -352,6 +355,7 @@ function TaskCommentRetryButton({
         )}
         {t(($) => $.execution_log.retry_task_tooltip)}
       </Button>
+      <RetryWithButton taskId={taskId} agentId={agentId} issueId={issueId} appearance="button" />
     </div>
   );
 }
@@ -917,6 +921,7 @@ function CommentRow({
             <TaskCommentRetryButton
               issueId={issueId}
               taskId={entry.source_task_id}
+              agentId={entry.actor_id}
               className="mt-2 pl-12 pr-4 max-md:pl-3 max-md:pr-3"
             />
           )}
@@ -1454,6 +1459,7 @@ function CommentCardImpl({
                   <TaskCommentRetryButton
                     issueId={issueId}
                     taskId={entry.source_task_id}
+                    agentId={entry.actor_id}
                     className="mt-2 pl-8 max-md:pl-0"
                   />
                 )}

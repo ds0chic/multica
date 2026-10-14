@@ -35,7 +35,7 @@ export function canRetryRun(task: AgentTask): boolean {
   return task.status === "failed" || task.status === "cancelled";
 }
 
-function useRetryRun(task: AgentTask, issueId: string) {
+function useRetryRun(taskId: string, issueId: string) {
   const { t } = useT("issues");
   const [retrying, setRetrying] = useState(false);
 
@@ -47,7 +47,7 @@ function useRetryRun(task: AgentTask, issueId: string) {
       // endpoint would fall back to the issue's current assignee and the wrong
       // agent would fire on rows whose agent has since been displaced
       // (reassignment, squad worker, or a one-off @-mention agent).
-      await api.rerunIssue(issueId, task.id, runOptions);
+      await api.rerunIssue(issueId, taskId, runOptions);
       return true;
     } catch (e) {
       // A rerun is re-gated on the operator's invoke permission (MUL-4525): a
@@ -76,7 +76,7 @@ function useRetryRun(task: AgentTask, issueId: string) {
 // Runs dialog so a failed run retries the same way wherever it is listed.
 export function RetryRunButton({ task, issueId }: { task: AgentTask; issueId: string }) {
   const { t } = useT("issues");
-  const { retrying, retry } = useRetryRun(task, issueId);
+  const { retrying, retry } = useRetryRun(task.id, issueId);
   const handleRetry = () => void retry();
 
   return (
@@ -101,7 +101,7 @@ export function RetryRunButton({ task, issueId }: { task: AgentTask; issueId: st
         </TooltipTrigger>
         <TooltipContent>{t(($) => $.execution_log.retry_task_tooltip)}</TooltipContent>
       </Tooltip>
-      <RetryWithButton task={task} issueId={issueId} />
+      <RetryWithButton taskId={task.id} agentId={task.agent_id} issueId={issueId} />
     </>
   );
 }
@@ -110,10 +110,56 @@ export function RetryRunButton({ task, issueId }: { task: AgentTask; issueId: st
  * "Retry with" picks a model and effort for the new run only. The agent's
  * saved settings stay as they are. The pickers start on the agent's own
  * values, and whatever is shown is what the retry runs with.
+ *
+ * `appearance="button"` is the labelled outline button used on the failure
+ * card in the activity timeline; the default is the run list's icon button.
  */
-function RetryWithButton({ task, issueId }: { task: AgentTask; issueId: string }) {
+export function RetryWithButton({
+  taskId,
+  agentId,
+  issueId,
+  appearance = "icon",
+}: {
+  taskId: string;
+  agentId: string;
+  issueId: string;
+  appearance?: "icon" | "button";
+}) {
   const { t } = useT("issues");
   const [open, setOpen] = useState(false);
+  const form = (
+    <PopoverContent align="end" className="w-auto min-w-64 p-2">
+      {/* Mounted only while open, so a long run list does not subscribe
+          every row to the agent, runtime and model catalogs. */}
+      <RetryWithForm
+        taskId={taskId}
+        agentId={agentId}
+        issueId={issueId}
+        onDone={() => setOpen(false)}
+      />
+    </PopoverContent>
+  );
+
+  if (appearance === "button") {
+    return (
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger
+          render={
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              aria-label={t(($) => $.execution_log.retry_with_aria)}
+            />
+          }
+        >
+          <SlidersHorizontal className="h-3.5 w-3.5" />
+          {t(($) => $.execution_log.retry_with_title)}
+        </PopoverTrigger>
+        {form}
+      </Popover>
+    );
+  }
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -135,32 +181,30 @@ function RetryWithButton({ task, issueId }: { task: AgentTask; issueId: string }
         </TooltipTrigger>
         <TooltipContent>{t(($) => $.execution_log.retry_with_tooltip)}</TooltipContent>
       </Tooltip>
-      <PopoverContent align="end" className="w-auto min-w-64 p-2">
-        {/* Mounted only while open, so a long run list does not subscribe
-            every row to the agent, runtime and model catalogs. */}
-        <RetryWithForm task={task} issueId={issueId} onDone={() => setOpen(false)} />
-      </PopoverContent>
+      {form}
     </Popover>
   );
 }
 
 function RetryWithForm({
-  task,
+  taskId,
+  agentId,
   issueId,
   onDone,
 }: {
-  task: AgentTask;
+  taskId: string;
+  agentId: string;
   issueId: string;
   onDone: () => void;
 }) {
   const { t } = useT("issues");
   const wsId = useWorkspaceId();
   const userId = useAuthStore((s) => s.user?.id);
-  const { retrying, retry } = useRetryRun(task, issueId);
+  const { retrying, retry } = useRetryRun(taskId, issueId);
 
   const { data: agents = [] } = useQuery(agentListOptions(wsId));
   const { data: runtimes = [] } = useQuery(runtimeListOptions(wsId));
-  const agent = agents.find((a) => a.id === task.agent_id);
+  const agent = agents.find((a) => a.id === agentId);
   const runtimeId = agent?.runtime_id || null;
   const runtime = runtimeId ? runtimes.find((r) => r.id === runtimeId) : undefined;
   const canDiscover =
