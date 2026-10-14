@@ -117,7 +117,9 @@ func confirmOverwrite(profile, newServerURL, newAppURL string) (bool, error) {
 		fmt.Fprintf(os.Stderr, "  workspace:  %s\n", cfg.WorkspaceID)
 	}
 	fmt.Fprintln(os.Stderr, "")
-	fmt.Fprint(os.Stderr, "This will reset your configuration. Continue? [y/N] ")
+	fmt.Fprintln(os.Stderr, "Setup will update these URLs and sign you in again. Daemon settings")
+	fmt.Fprintln(os.Stderr, "(concurrency, workspaces root, names, timeouts) are kept.")
+	fmt.Fprint(os.Stderr, "Continue? [y/N] ")
 
 	reader := bufio.NewReader(os.Stdin)
 	answer, _ := reader.ReadString('\n')
@@ -144,10 +146,8 @@ func runSetupCloud(cmd *cobra.Command, args []string) error {
 	}
 	profile := resolveProfile(cmd)
 
-	cfg := cli.CLIConfig{
-		ServerURL: defaultCloudServerURL,
-		AppURL:    defaultCloudAppURL,
-	}
+	existing, _ := cli.LoadCLIConfigForProfile(profile)
+	cfg := setupConfigFrom(existing, defaultCloudServerURL, defaultCloudAppURL)
 
 	ok, err := confirmOverwrite(profile, cfg.ServerURL, cfg.AppURL)
 	if err != nil {
@@ -341,14 +341,29 @@ func persistSelfHostConfigIfReachable(serverURL, appURL, profile string, probe f
 	if !probe(serverURL) {
 		return false, nil
 	}
-	cfg := cli.CLIConfig{
-		ServerURL: serverURL,
-		AppURL:    appURL,
-	}
-	if err := cli.SaveCLIConfigForProfile(cfg, profile); err != nil {
+	existing, _ := cli.LoadCLIConfigForProfile(profile)
+	if err := cli.SaveCLIConfigForProfile(setupConfigFrom(existing, serverURL, appURL), profile); err != nil {
 		return false, err
 	}
 	return true, nil
+}
+
+// setupConfigFrom builds the config `setup` writes from the profile's existing
+// one. Only the connection changes: the token is cleared because setup signs in
+// again, and the workspace is cleared only when the server changes, since its
+// ID means nothing on another deployment. Daemon settings saved with
+// `multica config set` (concurrency, workspaces root, device and runtime names,
+// timeouts, auto-update) are kept, because re-running setup is the documented
+// way to re-login or restart the daemon.
+func setupConfigFrom(existing cli.CLIConfig, serverURL, appURL string) cli.CLIConfig {
+	cfg := existing
+	if existing.ServerURL != serverURL {
+		cfg.WorkspaceID = ""
+	}
+	cfg.ServerURL = serverURL
+	cfg.AppURL = appURL
+	cfg.Token = ""
+	return cfg
 }
 
 // resolveSelfHostServerURL picks the backend URL for `setup self-host`: the
