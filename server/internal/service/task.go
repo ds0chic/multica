@@ -2870,6 +2870,8 @@ func (s *TaskService) CancelTaskByUser(ctx context.Context, taskID pgtype.UUID, 
 	if err != nil {
 		return nil, err
 	}
+	// A run the user stopped is no longer working the issue.
+	s.resetIssueAfterRunEnded(ctx, result.Task)
 	return &result.Task, nil
 }
 
@@ -5226,6 +5228,12 @@ func (s *TaskService) FailTaskWithTransition(ctx context.Context, taskID pgtype.
 			}
 		}
 	}
+	// The agent set in_progress when it started; with no retry coming and
+	// nothing else running, put the issue back so the board matches reality.
+	if retried == nil {
+		s.resetIssueAfterRunEnded(ctx, task)
+	}
+
 	// Reconcile agent status
 	s.ReconcileAgentStatus(ctx, task.AgentID)
 
@@ -5235,6 +5243,63 @@ func (s *TaskService) FailTaskWithTransition(ctx context.Context, taskID pgtype.
 	s.broadcastTaskFailedEvent(ctx, task, errMsg, failureReason, retried != nil)
 
 	return &task, true, nil
+}
+
+// resetIssueLeftInProgress moves an issue from in_progress back to todo once a
+// run on it has ended without success (failed with no retry, or stopped by the
+// user) and no other task is active on it. The agent sets in_progress when it
+// starts work, so without this the board keeps showing the issue as being
+// worked on while nothing runs.
+//
+// Only "an agent is actively working" resets, and since MUL-7240 that is the
+// fixed in_progress key alone. in_review and blocked are excluded because a
+// human or an external dependency owns the issue then; a CUSTOM started status
+// is excluded because custom statuses inherit lifecycle only, not the
+// active-status recovery rule. Effective() no longer projects a nonterminal
+// custom key onto a built-in, so this is a key comparison on purpose.
+// (MUL-6243, MUL-7240)
+func (s *TaskService) resetIssueLeftInProgress(ctx context.Context, issue db.Issue, sourceTaskID pgtype.UUID) {
+	if issuestatus.Effective(ctx, s.Queries, issue.WorkspaceID, issue.Status) != "in_progress" {
+		return
+	}
+	issueKey := util.UUIDToString(issue.ID)
+	hasActive, err := s.Queries.HasActiveTaskForIssue(ctx, issue.ID)
+	if err != nil {
+		slog.Warn("reset issue left in progress: active check failed", "issue_id", issueKey, "error", err)
+		return
+	}
+	if hasActive {
+		return
+	}
+	updatedIssue, err := s.Queries.UpdateIssueStatus(ctx, db.UpdateIssueStatusParams{
+		SourceTaskID: sourceTaskID,
+		ID:           issue.ID,
+		Status:       "todo",
+		WorkspaceID:  issue.WorkspaceID,
+	})
+	if err != nil {
+		slog.Warn("reset issue left in progress failed", "issue_id", issueKey, "error", err)
+		return
+	}
+	// This direct reset bypasses the HTTP UpdateIssue handler that normally
+	// emits issue:updated, so emit it here too. Without it the board /
+	// status-filter caches keep showing the issue as in_progress until the
+	// next write touches it (#4648 / MUL-3782).
+	s.broadcastIssueUpdated(ctx, updatedIssue, issue.Status)
+}
+
+// resetIssueAfterRunEnded loads the task's issue and applies
+// resetIssueLeftInProgress. Tasks without an issue (chat, autopilot direct
+// runs) are ignored.
+func (s *TaskService) resetIssueAfterRunEnded(ctx context.Context, task db.AgentTaskQueue) {
+	if !task.IssueID.Valid {
+		return
+	}
+	issue, err := s.Queries.GetIssue(ctx, task.IssueID)
+	if err != nil {
+		return
+	}
+	s.resetIssueLeftInProgress(ctx, issue, task.ID)
 }
 
 // retryableReasons enumerates failure reasons that the auto-retry path is
@@ -6080,44 +6145,9 @@ func (s *TaskService) HandleFailedTasks(ctx context.Context, tasks []db.AgentTas
 				// Reset stuck in_progress issues only when no other active
 				// task exists for the issue and no retry was just enqueued.
 				issueKey := util.UUIDToString(t.IssueID)
-				// Only "an agent is actively working" resets, and since
-				// MUL-7240 that is the fixed in_progress key alone. in_review
-				// and blocked are excluded because a human or an external
-				// dependency owns the issue then; a CUSTOM started status is
-				// excluded because custom statuses inherit lifecycle only, not
-				// the active-status recovery rule. Effective() no longer
-				// projects a nonterminal custom key onto a built-in, so this is
-				// a key comparison on purpose. (MUL-6243, MUL-7240)
-				effectiveStatus := issuestatus.Effective(ctx, s.Queries, issue.WorkspaceID, issue.Status)
-				if effectiveStatus == "in_progress" && !processedIssues[issueKey] && !retriedIssues[issueKey] {
+				if !processedIssues[issueKey] && !retriedIssues[issueKey] {
 					processedIssues[issueKey] = true
-					hasActive, checkErr := s.Queries.HasActiveTaskForIssue(ctx, t.IssueID)
-					if checkErr != nil {
-						slog.Warn("handle failed tasks: active check failed",
-							"issue_id", issueKey,
-							"error", checkErr,
-						)
-					} else if !hasActive {
-						updatedIssue, updateErr := s.Queries.UpdateIssueStatus(ctx, db.UpdateIssueStatusParams{
-							SourceTaskID: t.ID,
-							ID:           t.IssueID,
-							Status:       "todo",
-							WorkspaceID:  issue.WorkspaceID,
-						})
-						if updateErr != nil {
-							slog.Warn("handle failed tasks: reset stuck issue failed",
-								"issue_id", issueKey,
-								"error", updateErr,
-							)
-						} else {
-							// This direct reset bypasses the HTTP UpdateIssue
-							// handler that normally emits issue:updated, so emit
-							// it here too. Without it the board / status-filter
-							// caches keep showing the issue as in_progress until
-							// the next write touches it (#4648 / MUL-3782).
-							s.broadcastIssueUpdated(ctx, updatedIssue, issue.Status)
-						}
-					}
+					s.resetIssueLeftInProgress(ctx, issue, t.ID)
 				}
 			}
 		}
