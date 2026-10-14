@@ -239,7 +239,8 @@ func runSetupSelfHost(cmd *cobra.Command, args []string) error {
 		fmt.Fprintf(os.Stderr, "\n⚠ Server at %s is not reachable.\n", serverURL)
 		fmt.Fprintln(os.Stderr, "  Your existing configuration was left unchanged.")
 		fmt.Fprintln(os.Stderr, "  Verify the URL, then re-run 'multica setup self-host' once it's reachable.")
-		return nil
+		// Setup did not happen, so scripts chaining on it must see a failure.
+		return fmt.Errorf("server at %s is not reachable", serverURL)
 	}
 
 	fmt.Fprintln(os.Stderr, "Configured for self-hosted server.")
