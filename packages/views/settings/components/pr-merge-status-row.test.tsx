@@ -86,7 +86,7 @@ describe("PRMergeStatusRow", () => {
     expect(select()).toHaveTextContent(enSettings.pr_merge_status.none);
   });
 
-  it("saves the chosen status alongside the other workspace settings", async () => {
+  it("saves only the chosen status for the server to merge into the settings", async () => {
     const user = userEvent.setup();
     workspaceRef.current.settings = { github_enabled: true };
     mockUpdateWorkspace.mockResolvedValue({
@@ -103,7 +103,7 @@ describe("PRMergeStatusRow", () => {
 
     await waitFor(() =>
       expect(mockUpdateWorkspace).toHaveBeenCalledWith("workspace-1", {
-        settings: { github_enabled: true, pr_merge_status: "qa" },
+        settings: { pr_merge_status: "qa" },
       }),
     );
   });

@@ -14,6 +14,7 @@ vi.mock("@multica/core/auth", () => ({
 }));
 let role = "admin";
 vi.mock("@multica/core/workspace/queries", () => ({
+  workspaceKeys: { list: () => ["workspaces", "list"] },
   memberListOptions: () => ({ queryKey: ["members", "ws"], queryFn: async () => [{ user_id: "u", role }] }),
 }));
 

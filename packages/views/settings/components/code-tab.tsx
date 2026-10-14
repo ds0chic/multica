@@ -88,11 +88,9 @@ export function CodeTab() {
     if (!workspace || savingKey) return;
     setSavingKey(key);
     try {
-      const merged = {
-        ...((workspace.settings as Record<string, unknown>) ?? {}),
-        [key]: next,
-      };
-      const updated = await api.updateWorkspace(workspace.id, { settings: merged });
+      // Send only the changed key: the server merges it into the stored
+      // settings, so a stale cached copy cannot revert another setting.
+      const updated = await api.updateWorkspace(workspace.id, { settings: { [key]: next } });
       qc.setQueryData(workspaceKeys.list(), (old: Workspace[] | undefined) =>
         old?.map((ws) => (ws.id === updated.id ? updated : ws)),
       );

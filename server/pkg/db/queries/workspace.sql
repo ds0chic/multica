@@ -49,7 +49,15 @@ UPDATE workspace SET
     name = COALESCE(sqlc.narg('name'), name),
     description = COALESCE(sqlc.narg('description'), description),
     context = COALESCE(sqlc.narg('context'), context),
-    settings = COALESCE(sqlc.narg('settings'), settings),
+    -- Settings writes are merged into what is stored, so a client holding a
+    -- stale copy cannot drop a key another writer added (for example the
+    -- child-done wakeup default, which the server merges in on its own).
+    -- settings_remove names keys the write must delete.
+    settings = CASE
+        WHEN sqlc.narg('settings')::jsonb IS NULL THEN settings
+        ELSE (COALESCE(settings, '{}'::jsonb) || sqlc.narg('settings')::jsonb)
+            - COALESCE(sqlc.narg('settings_remove')::text[], '{}'::text[])
+    END,
     repos = COALESCE(sqlc.narg('repos'), repos),
     issue_prefix = COALESCE(sqlc.narg('issue_prefix'), issue_prefix),
     avatar_url = COALESCE(sqlc.narg('avatar_url'), avatar_url),
