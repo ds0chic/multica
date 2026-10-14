@@ -113,16 +113,31 @@ func smtpAuthWithFallback(c smtpAuthClient, host, username, password string) (bo
 	return true, plainErr
 }
 
+// defaultFromEmail is the Resend-mode sender when RESEND_FROM_EMAIL is unset.
+const defaultFromEmail = "noreply@multica.ai"
+
 func resolveFromEmail(smtpHost string) string {
 	resendFrom := strings.TrimSpace(os.Getenv("RESEND_FROM_EMAIL"))
 	if smtpHost == "" {
 		if resendFrom != "" {
 			return resendFrom
 		}
-		return "noreply@multica.ai"
+		return defaultFromEmail
 	}
 	if smtpFrom := strings.TrimSpace(os.Getenv("SMTP_FROM_EMAIL")); smtpFrom != "" {
 		return smtpFrom
+	}
+	// The shipped RESEND_FROM_EMAIL default is a Resend placeholder, not an
+	// address the SMTP account may send as; mail from a domain the relay does
+	// not own is rejected or lands in spam. Prefer the login address. With
+	// neither, keep the placeholder: an open relay (no SMTP_USERNAME) may still
+	// accept it, and an empty sender would stop login codes from going out at
+	// all. NewEmailService warns about that case at startup.
+	if resendFrom != "" && resendFrom != defaultFromEmail {
+		return resendFrom
+	}
+	if user := strings.TrimSpace(os.Getenv("SMTP_USERNAME")); strings.Contains(user, "@") {
+		return user
 	}
 	return resendFrom
 }
@@ -233,6 +248,9 @@ func NewEmailService() *EmailService {
 			tlsLabel = "implicit-tls"
 		}
 		fmt.Printf("EmailService: SMTP relay %s:%s (%s) from=%s\n", smtpHost, smtpPort, tlsLabel, from)
+		if from == defaultFromEmail {
+			fmt.Printf("EmailService: SMTP sender is the placeholder %s; set SMTP_FROM_EMAIL to an address your relay may send as\n", defaultFromEmail)
+		}
 	case client != nil:
 		fmt.Printf("EmailService: Resend API from=%s\n", from)
 	default:

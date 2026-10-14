@@ -47,7 +47,7 @@ Common connection modes:
 | STARTTLS | `SMTP_PORT=587`; upgrades to TLS by default when the server supports it |
 | Implicit TLS | `SMTP_PORT=465`, or set `SMTP_TLS=implicit` explicitly |
 
-If `SMTP_FROM_EMAIL` is unset, it falls back to `RESEND_FROM_EMAIL`. Private CAs or self-signed certificates require adding the CA to the container trust store; `SMTP_TLS_INSECURE=true` skips certificate verification and should only be used temporarily on a trusted internal network.
+If `SMTP_FROM_EMAIL` is unset, it falls back to a customised `RESEND_FROM_EMAIL`, then to `SMTP_USERNAME` when that is an email address. The default `noreply@multica.ai` is never used for SMTP; with no usable sender, sending fails with an error naming the missing setting. Private CAs or self-signed certificates require adding the CA to the container trust store; `SMTP_TLS_INSECURE=true` skips certificate verification and should only be used temporarily on a trusted internal network.
 
 Some strict relays also require a valid EHLO name:
 

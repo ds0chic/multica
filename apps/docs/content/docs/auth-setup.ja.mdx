@@ -47,7 +47,7 @@ SMTP_FROM_EMAIL=noreply@example.com
 | STARTTLS | `SMTP_PORT=587`。サーバーが対応していればデフォルトで TLS にアップグレード |
 | 暗黙的 TLS | `SMTP_PORT=465`、または `SMTP_TLS=implicit` を明示的に設定 |
 
-`SMTP_FROM_EMAIL` が未設定の場合は `RESEND_FROM_EMAIL` にフォールバックします。プライベート CA や自己署名証明書を使う場合は、CA をコンテナの信頼ストアに追加してください。`SMTP_TLS_INSECURE=true` は証明書検証をスキップするため、信頼できる内部ネットワークで一時的に使う場合に限ってください。
+`SMTP_FROM_EMAIL` が未設定の場合は カスタム設定した `RESEND_FROM_EMAIL`、次にメールアドレス形式の `SMTP_USERNAME` の順にフォールバックします。既定の `noreply@multica.ai` は SMTP では使われず、使える送信元がない場合は不足している設定名を示すエラーで送信に失敗します。プライベート CA や自己署名証明書を使う場合は、CA をコンテナの信頼ストアに追加してください。`SMTP_TLS_INSECURE=true` は証明書検証をスキップするため、信頼できる内部ネットワークで一時的に使う場合に限ってください。
 
 一部の厳格な relay は、有効な EHLO 名も要求します:
 

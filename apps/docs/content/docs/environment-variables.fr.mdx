@@ -94,7 +94,7 @@ SMTP est prioritaire sur Resend dès que `SMTP_HOST` n'est pas vide.
 | `SMTP_PORT` | `25` | Valeurs courantes : 25, 587, 465 |
 | `SMTP_USERNAME` | vide | Nom d'utilisateur ; laissez vide pour les relais anonymes |
 | `SMTP_PASSWORD` | vide | Mot de passe |
-| `SMTP_FROM_EMAIL` | se rabat sur `RESEND_FROM_EMAIL` | Expéditeur de l'enveloppe (Envelope From) et en-tête From du message |
+| `SMTP_FROM_EMAIL` | se rabat sur un `RESEND_FROM_EMAIL` personnalisé, sinon sur `SMTP_USERNAME` s'il s'agit d'une adresse | Expéditeur de l'enveloppe (Envelope From) et en-tête From du message |
 | `SMTP_TLS` | `starttls` | `implicit`, `smtps` ou `ssl` signifient TLS implicite ; le port 465 l'active automatiquement |
 | `SMTP_TLS_INSECURE` | `false` | Ignore la vérification des certificats ; réseaux internes de confiance uniquement |
 | `SMTP_EHLO_NAME` | nom d'hôte | Nom EHLO/FQDN exigé par les relais stricts |
