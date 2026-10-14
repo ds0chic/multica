@@ -413,6 +413,8 @@ describe("InlineCommentRun", () => {
     expect(screen.queryByText("Failed")).not.toBeInTheDocument();
     expect(screen.queryByText("task cancelled by server")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Retry run" })).toBeInTheDocument();
+    // The failed run's card in the activity timeline also offers "Retry with".
+    expect(screen.getByRole("button", { name: "Retry with another model or effort" })).toBeInTheDocument();
     await userEvent.hover(label);
     expect(await screen.findByText("task cancelled by server")).toBeInTheDocument();
   });
