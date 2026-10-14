@@ -6,6 +6,7 @@ import {
 import type { IssueWakeupInput, SystemWakeup, WorkspaceSystemWakeup, WorkspaceWakeupFilters } from "../types";
 import { api } from "../api";
 import { issueKeys } from "./queries";
+import { workspaceKeys } from "../workspace/queries";
 
 export function workspaceWakeupSummariesOptions(workspaceId: string) {
   return queryOptions({
@@ -75,6 +76,9 @@ export function useUpdateWorkspaceSystemWakeup(workspaceId: string) {
         client.invalidateQueries({ queryKey: workspaceSystemWakeupsOptions(workspaceId).queryKey }),
         client.invalidateQueries({ queryKey: ["issue-system-wakeups", workspaceId] }),
         client.invalidateQueries({ queryKey: ["workspace-wakeups", workspaceId] }),
+        // The default is stored in workspace settings, which the cached
+        // workspace carries too.
+        client.invalidateQueries({ queryKey: workspaceKeys.list() }),
       ]),
   });
 }

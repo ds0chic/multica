@@ -404,18 +404,37 @@ func (h *Handler) UpdateWorkspace(w http.ResponseWriter, r *http.Request) {
 		params.Context = pgtype.Text{String: *req.Context, Valid: true}
 	}
 	if req.Settings != nil {
-		if incoming, ok := req.Settings.(map[string]any); ok {
-			// Only an old client's flip of the retired PR switch needs the
-			// stored value; see reconcilePRMergeSettings.
-			var stored map[string]any
-			if _, sent := incoming[prAutoCompleteLegacyKey]; sent {
-				if existing, err := h.Queries.GetWorkspace(r.Context(), idUUID); err == nil {
-					_ = json.Unmarshal(existing.Settings, &stored)
-				}
-			}
-			reconcilePRMergeSettings(stored, incoming)
+		incoming, ok := req.Settings.(map[string]any)
+		if !ok {
+			writeError(w, http.StatusBadRequest, "settings must be an object")
+			return
 		}
-		s, _ := json.Marshal(req.Settings)
+		// The write is merged into the stored settings (see UpdateWorkspace in
+		// workspace.sql), so a client holding a stale copy cannot drop keys
+		// another writer added. The retired PR switch is reconciled against
+		// the merged view, then written back explicitly or removed.
+		var stored map[string]any
+		if existing, err := h.Queries.GetWorkspace(r.Context(), idUUID); err == nil {
+			_ = json.Unmarshal(existing.Settings, &stored)
+		}
+		merged := make(map[string]any, len(stored)+len(incoming))
+		for k, v := range stored {
+			merged[k] = v
+		}
+		for k, v := range incoming {
+			merged[k] = v
+		}
+		reconcilePRMergeSettings(stored, merged)
+		if v, ok := merged[prMergeStatusKey]; ok {
+			incoming[prMergeStatusKey] = v
+		}
+		if v, ok := merged[prAutoCompleteLegacyKey]; ok {
+			incoming[prAutoCompleteLegacyKey] = v
+		} else {
+			delete(incoming, prAutoCompleteLegacyKey)
+			params.SettingsRemove = []string{prAutoCompleteLegacyKey}
+		}
+		s, _ := json.Marshal(incoming)
 		params.Settings = s
 	}
 	if req.Repos != nil {

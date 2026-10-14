@@ -83,7 +83,8 @@ export function PRMergeStatusRow({ canManage }: { canManage: boolean }) {
     setSaving(true);
     try {
       const updated = await api.updateWorkspace(workspace.id, {
-        settings: { ...((workspace.settings as Record<string, unknown>) ?? {}), pr_merge_status: next },
+        // The server merges this into the stored settings.
+        settings: { pr_merge_status: next },
       });
       qc.setQueryData(workspaceKeys.list(), (old: Workspace[] | undefined) =>
         old?.map((ws) => (ws.id === updated.id ? updated : ws)),

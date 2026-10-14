@@ -144,7 +144,7 @@ describe("CodeTab — GitHub", () => {
     expect(screen.getByText(/Connected to acme · Connected by Ada/)).toBeInTheDocument();
   });
 
-  it("pauses GitHub from the row menu, keeping the other settings", async () => {
+  it("pauses GitHub from the row menu, sending only that key for the server to merge", async () => {
     connect();
     workspaceRef.current.settings = { pr_merge_status: "done", co_authored_by_enabled: false };
     const user = userEvent.setup();
@@ -155,11 +155,7 @@ describe("CodeTab — GitHub", () => {
 
     await waitFor(() => {
       expect(mockUpdateWorkspace).toHaveBeenCalledWith("workspace-1", {
-        settings: {
-          pr_merge_status: "done",
-          co_authored_by_enabled: false,
-          github_enabled: false,
-        },
+        settings: { github_enabled: false },
       });
     });
   });
@@ -238,7 +234,7 @@ describe("CodeTab — pull requests", () => {
 
     await waitFor(() => {
       expect(mockUpdateWorkspace).toHaveBeenCalledWith("workspace-1", {
-        settings: { pr_merge_status: "done", co_authored_by_enabled: false },
+        settings: { co_authored_by_enabled: false },
       });
     });
   });

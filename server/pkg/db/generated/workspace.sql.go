@@ -438,24 +438,33 @@ UPDATE workspace SET
     name = COALESCE($2, name),
     description = COALESCE($3, description),
     context = COALESCE($4, context),
-    settings = COALESCE($5, settings),
-    repos = COALESCE($6, repos),
-    issue_prefix = COALESCE($7, issue_prefix),
-    avatar_url = COALESCE($8, avatar_url),
+    -- Settings writes are merged into what is stored, so a client holding a
+    -- stale copy cannot drop a key another writer added (for example the
+    -- child-done wakeup default, which the server merges in on its own).
+    -- settings_remove names keys the write must delete.
+    settings = CASE
+        WHEN $5::jsonb IS NULL THEN settings
+        ELSE (COALESCE(settings, '{}'::jsonb) || $5::jsonb)
+            - COALESCE($6::text[], '{}'::text[])
+    END,
+    repos = COALESCE($7, repos),
+    issue_prefix = COALESCE($8, issue_prefix),
+    avatar_url = COALESCE($9, avatar_url),
     updated_at = now()
 WHERE id = $1
 RETURNING id, name, slug, description, settings, created_at, updated_at, context, repos, issue_prefix, issue_counter, avatar_url, attribution_fail_closed
 `
 
 type UpdateWorkspaceParams struct {
-	ID          pgtype.UUID `json:"id"`
-	Name        pgtype.Text `json:"name"`
-	Description pgtype.Text `json:"description"`
-	Context     pgtype.Text `json:"context"`
-	Settings    []byte      `json:"settings"`
-	Repos       []byte      `json:"repos"`
-	IssuePrefix pgtype.Text `json:"issue_prefix"`
-	AvatarUrl   pgtype.Text `json:"avatar_url"`
+	ID             pgtype.UUID `json:"id"`
+	Name           pgtype.Text `json:"name"`
+	Description    pgtype.Text `json:"description"`
+	Context        pgtype.Text `json:"context"`
+	Settings       []byte      `json:"settings"`
+	SettingsRemove []string    `json:"settings_remove"`
+	Repos          []byte      `json:"repos"`
+	IssuePrefix    pgtype.Text `json:"issue_prefix"`
+	AvatarUrl      pgtype.Text `json:"avatar_url"`
 }
 
 func (q *Queries) UpdateWorkspace(ctx context.Context, arg UpdateWorkspaceParams) (Workspace, error) {
@@ -465,6 +474,7 @@ func (q *Queries) UpdateWorkspace(ctx context.Context, arg UpdateWorkspaceParams
 		arg.Description,
 		arg.Context,
 		arg.Settings,
+		arg.SettingsRemove,
 		arg.Repos,
 		arg.IssuePrefix,
 		arg.AvatarUrl,
