@@ -236,11 +236,19 @@ func TestNewEmailService_FromEmailResolution(t *testing.T) {
 			want:         "me@example.com",
 		},
 		{
-			name:         "smtp mode with only a placeholder and a non-address login has no sender",
+			name:         "smtp mode with only a placeholder and a non-address login keeps the placeholder",
 			smtpHost:     "smtp.example.com",
 			smtpUsername: "apikey",
 			resendFrom:   "noreply@multica.ai",
-			want:         "",
+			want:         "noreply@multica.ai",
+		},
+		{
+			// An open relay accepted the placeholder before; an empty sender
+			// would stop every login code from being sent.
+			name:       "smtp open relay with only the placeholder keeps sending",
+			smtpHost:   "smtp.example.com",
+			resendFrom: "noreply@multica.ai",
+			want:       "noreply@multica.ai",
 		},
 		{
 			name: "default",

@@ -127,15 +127,17 @@ func resolveFromEmail(smtpHost string) string {
 	}
 	// The shipped RESEND_FROM_EMAIL default is a Resend placeholder, not an
 	// address the SMTP account may send as; mail from a domain the relay does
-	// not own is rejected or lands in spam. Prefer the login address, and with
-	// neither, leave the sender empty so sendSMTP fails with a clear message.
+	// not own is rejected or lands in spam. Prefer the login address. With
+	// neither, keep the placeholder: an open relay (no SMTP_USERNAME) may still
+	// accept it, and an empty sender would stop login codes from going out at
+	// all. NewEmailService warns about that case at startup.
 	if resendFrom != "" && resendFrom != defaultFromEmail {
 		return resendFrom
 	}
 	if user := strings.TrimSpace(os.Getenv("SMTP_USERNAME")); strings.Contains(user, "@") {
 		return user
 	}
-	return ""
+	return resendFrom
 }
 
 func (s *EmailService) openSMTPClient() (*smtp.Client, error) {
@@ -244,6 +246,9 @@ func NewEmailService() *EmailService {
 			tlsLabel = "implicit-tls"
 		}
 		fmt.Printf("EmailService: SMTP relay %s:%s (%s) from=%s\n", smtpHost, smtpPort, tlsLabel, from)
+		if from == defaultFromEmail {
+			fmt.Printf("EmailService: SMTP sender is the placeholder %s; set SMTP_FROM_EMAIL to an address your relay may send as\n", defaultFromEmail)
+		}
 	case client != nil:
 		fmt.Printf("EmailService: Resend API from=%s\n", from)
 	default:
