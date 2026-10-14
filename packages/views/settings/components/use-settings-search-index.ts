@@ -10,6 +10,7 @@ const NOTIFICATION_GROUPS = [
   "status_changes",
   "comments",
   "mentions",
+  "reactions",
   "updates",
   "agent_activity",
 ] as const;

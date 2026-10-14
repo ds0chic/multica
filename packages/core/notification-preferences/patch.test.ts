@@ -56,6 +56,12 @@ describe("notification preference patches", () => {
     ).toEqual({ comments: "muted", mentions: "muted" });
   });
 
+  it("carries the reactions group so its toggle can be sent", () => {
+    expect(
+      deriveNotificationPreferencePatch({}, { reactions: "muted" }),
+    ).toEqual({ reactions: "muted" });
+  });
+
   it("does not roll back a key that a later mutation already changed", () => {
     expect(
       rollbackNotificationPreferencePatch(

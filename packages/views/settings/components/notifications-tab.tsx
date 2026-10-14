@@ -23,6 +23,7 @@ const INBOX_GROUP_KEYS = [
   "status_changes",
   "comments",
   "mentions",
+  "reactions",
   "updates",
   "agent_activity",
 ] as const;

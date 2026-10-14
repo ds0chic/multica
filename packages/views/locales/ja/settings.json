@@ -660,6 +660,10 @@
         "label": "メンション",
         "description": "誰かがあなたを @メンションしたとき（@all と @squad を含む）"
       },
+      "reactions": {
+        "label": "リアクション",
+        "description": "あなたのイシューやコメントにリアクションが付いたとき"
+      },
       "updates": {
         "label": "優先度と期限",
         "description": "フォロー中のタスクの優先度や期限が変わったとき"

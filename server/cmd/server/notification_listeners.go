@@ -179,6 +179,7 @@ var notifTypeToGroup = map[string]string{
 	"status_changed":     "status_changes",
 	"new_comment":        "comments",
 	"mentioned":          "mentions",
+	"reaction_added":     "reactions",
 	"priority_changed":   "updates",
 	"start_date_changed": "updates",
 	"due_date_changed":   "updates",

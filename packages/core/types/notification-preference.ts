@@ -3,6 +3,7 @@ export type NotificationGroupKey =
   | "status_changes"
   | "comments"
   | "mentions"
+  | "reactions"
   | "updates"
   | "agent_activity"
   | "system_notifications";
