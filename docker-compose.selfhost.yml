@@ -96,10 +96,15 @@ services:
       AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
       ATTACHMENT_DOWNLOAD_MODE: ${ATTACHMENT_DOWNLOAD_MODE:-auto}
       ATTACHMENT_DOWNLOAD_URL_TTL: ${ATTACHMENT_DOWNLOAD_URL_TTL:-30m}
+      # Public base URL for locally stored uploads, when they are served
+      # through a different URL than the API itself.
+      LOCAL_UPLOAD_BASE_URL: ${LOCAL_UPLOAD_BASE_URL:-}
       CLOUDFRONT_DOMAIN: ${CLOUDFRONT_DOMAIN:-}
       CLOUDFRONT_KEY_PAIR_ID: ${CLOUDFRONT_KEY_PAIR_ID:-}
       CLOUDFRONT_PRIVATE_KEY: ${CLOUDFRONT_PRIVATE_KEY:-}
       COOKIE_DOMAIN: ${COOKIE_DOMAIN:-}
+      # Session lifetime (Go duration or seconds). Empty = 30 days.
+      AUTH_TOKEN_TTL: ${AUTH_TOKEN_TTL:-}
       APP_ENV: ${APP_ENV:-production}
       MULTICA_DEV_VERIFICATION_CODE: ${MULTICA_DEV_VERIFICATION_CODE:-}
       MULTICA_APP_URL: ${MULTICA_APP_URL:-http://localhost:3000}
@@ -151,6 +156,12 @@ services:
       # Empty default = headers ignored, RemoteAddr used. Set e.g.
       # "127.0.0.1/32" when running behind a same-host reverse proxy.
       MULTICA_TRUSTED_PROXIES: ${MULTICA_TRUSTED_PROXIES:-}
+      # Same idea for the auth (login code) rate limiter. Needed behind a
+      # reverse proxy, or every login shares the proxy's IP bucket.
+      RATE_LIMIT_TRUSTED_PROXIES: ${RATE_LIMIT_TRUSTED_PROXIES:-}
+      # Bearer token for /health/realtime. Needed behind a reverse proxy,
+      # where proxied requests are otherwise refused with 404.
+      REALTIME_METRICS_TOKEN: ${REALTIME_METRICS_TOKEN:-}
       # Server-side LLM layer, backing internal helpers such as chat title
       # generation. Both the API key and the base URL empty = layer disabled,
       # and callers fall back silently rather than failing. MULTICA_LLM_MAX_RETRIES
