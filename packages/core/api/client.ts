@@ -103,6 +103,7 @@ import type {
   PendingChatTasksResponse,
   HasPendingChatTasksResponse,
   SendChatMessageResponse,
+  ChatRunOptions,
   StartMikaOnboardingResponse,
   CancelTaskResponse,
   Project,
@@ -3797,14 +3798,20 @@ export class ApiClient {
     sessionId: string,
     content: string,
     attachmentIds?: string[],
+    runOptions?: ChatRunOptions,
   ): Promise<SendChatMessageResponse> {
     const body: {
       content: string;
       attachment_ids?: string[];
+      model?: string;
+      thinking_level?: string;
     } = { content };
     if (attachmentIds && attachmentIds.length > 0) {
       body.attachment_ids = attachmentIds;
     }
+    // Per-message overrides; omitted fields run with the agent's own settings.
+    if (runOptions?.model) body.model = runOptions.model;
+    if (runOptions?.thinkingLevel) body.thinking_level = runOptions.thinkingLevel;
     const raw = await this.fetch<unknown>(`/api/chat/sessions/${sessionId}/messages`, {
       method: "POST",
       body: JSON.stringify(body),

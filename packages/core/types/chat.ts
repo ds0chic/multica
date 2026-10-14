@@ -186,6 +186,15 @@ export interface ChatMessagesPage {
   next_cursor?: ChatMessagesCursor | null;
 }
 
+/**
+ * Per-message model / thinking-level selection sent with a chat message.
+ * Empty or missing fields mean "use the agent's saved setting".
+ */
+export interface ChatRunOptions {
+  model?: string;
+  thinkingLevel?: string;
+}
+
 export interface SendChatMessageResponse {
   message_id: string;
   task_id: string;

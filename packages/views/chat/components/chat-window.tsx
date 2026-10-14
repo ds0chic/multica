@@ -60,7 +60,7 @@ import {
   useSetChatSessionProject,
   useUpdateChatSession,
 } from "@multica/core/chat/mutations";
-import { useChatStore } from "@multica/core/chat";
+import { useChatRunOptionsStore, useChatStore } from "@multica/core/chat";
 import { upsertChatMessageToCaches } from "@multica/core/chat/message-cache";
 import { chatQuickActionsPendingOptions } from "@multica/core/chat/queries";
 import { useQuickActionsPendingTimeout } from "@multica/core/chat/use-quick-actions-pending-timeout";
@@ -72,6 +72,7 @@ import { useChatTaskActions } from "./use-chat-task-actions";
 import { useChatInputFocus } from "./use-chat-input-focus";
 import { ChatMessageList, ChatMessageSkeleton } from "./chat-message-list";
 import { ChatInput } from "./chat-input";
+import { ChatRunOptions } from "./chat-run-options";
 import { ChatQueue } from "./chat-queue";
 import { EmptyState } from "./chat-empty-state";
 import { SessionRenameInput } from "./session-rename-input";
@@ -514,7 +515,12 @@ export function ChatWindow() {
       // the draft for retry (ChatInput never cleared it).
       let result;
       try {
-        result = await api.sendChatMessage(sessionId, finalContent, attachmentIds);
+        result = await api.sendChatMessage(
+          sessionId,
+          finalContent,
+          attachmentIds,
+          useChatRunOptionsStore.getState().byAgent[activeAgent.id],
+        );
       } catch (err) {
         apiLogger.error("sendChatMessage.error", { sessionId, err });
         const reason = dispatchReasonCode(err);
@@ -1025,12 +1031,15 @@ export function ChatWindow() {
           setSessionProject.isPending || (!!activeSessionId && !currentSession)
         }
         leftAdornment={
-          <AgentDropdown
-            agents={availableAgents}
-            activeAgent={activeAgent}
-            userId={user?.id}
-            onSelect={handleSelectAgent}
-          />
+          <>
+            <AgentDropdown
+              agents={availableAgents}
+              activeAgent={activeAgent}
+              userId={user?.id}
+              onSelect={handleSelectAgent}
+            />
+            <ChatRunOptions agent={activeAgent} />
+          </>
         }
         contextItems={contextItems}
         focusRequest={focusRequest}
