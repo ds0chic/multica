@@ -80,6 +80,8 @@ const h = vi.hoisted(() => {
     draftRestores: null as
       | { restores: { id: string; chat_session_id: string; content: string }[] }
       | null,
+    // Composer model / effort picks, keyed by agent id.
+    runOptions: {} as Record<string, { model?: string; thinkingLevel?: string }>,
   };
 });
 
@@ -152,6 +154,11 @@ vi.mock("@multica/core/chat", () => ({
   useChatStore: Object.assign(
     (sel: (s: typeof h.store) => unknown) => sel(h.store),
     { getState: () => h.store },
+  ),
+  useChatRunOptionsStore: Object.assign(
+    (sel: (s: { byAgent: typeof h.runOptions }) => unknown) =>
+      sel({ byAgent: h.runOptions }),
+    { getState: () => ({ byAgent: h.runOptions }) },
   ),
 }));
 vi.mock("@multica/core/realtime", () => ({
@@ -1107,6 +1114,22 @@ describe("useChatController.handleSend — compose target tracking", () => {
       expect.objectContaining({ clearEditor: true, extraDraftKeys: ["new-session"] }),
     );
     expect(h.store.setActiveSession).toHaveBeenCalledWith("new-session");
+  });
+
+  it("sends the composer's model and effort pick with the message", async () => {
+    h.runOptions = { "agent-a": { model: "picked-model", thinkingLevel: "high" } };
+    try {
+      const { send } = sendFrom("s1");
+      await send();
+      expect(api.sendChatMessage).toHaveBeenCalledWith(
+        "s1",
+        "hello",
+        undefined,
+        { model: "picked-model", thinkingLevel: "high" },
+      );
+    } finally {
+      h.runOptions = {};
+    }
   });
 
   it("does not create or send a chat for an unbound agent", async () => {

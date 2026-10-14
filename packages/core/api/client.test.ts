@@ -1795,6 +1795,29 @@ describe("ApiClient", () => {
       ]);
     });
 
+    it("keeps a valid message when its run overrides are malformed", async () => {
+      const malformed = [{
+        id: "m1",
+        chat_session_id: "session-1",
+        role: "user",
+        content: "hello",
+        task_id: "task-1",
+        created_at: "2026-06-01T00:00:00Z",
+        model_override: 42,
+        thinking_level_override: { level: "high" },
+      }];
+      vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse(malformed, 200)));
+
+      const client = new ApiClient("https://api.example.test");
+      await expect(client.listChatMessages("session-1")).resolves.toEqual([
+        expect.objectContaining({
+          content: "hello",
+          model_override: "",
+          thinking_level_override: "",
+        }),
+      ]);
+    });
+
     it("falls back to an empty page for a malformed paged response", async () => {
       vi.stubGlobal(
         "fetch",

@@ -879,7 +879,11 @@ function MessageFooter({
   const isNoResponse = message.message_kind === "no_response";
   const copyContent = extractCopyText(message, timeline, transformContent);
   const showCopy = !isPending && !isNoResponse && copyContent.trim().length > 0;
-  if (message.elapsed_ms == null && !showCopy) return null;
+  // The per-message model / effort pick this turn ran with, if any.
+  const runPick = [message.model_override, message.thinking_level_override]
+    .filter(Boolean)
+    .join(" · ");
+  if (message.elapsed_ms == null && !showCopy && !runPick) return null;
   return (
     <div className="flex items-center gap-1.5">
       {message.elapsed_ms != null && (
@@ -887,6 +891,11 @@ function MessageFooter({
           variant={isNoResponse ? "finished" : "replied"}
           elapsedMs={message.elapsed_ms}
         />
+      )}
+      {runPick && (
+        <div className="min-w-0 truncate font-mono text-micro text-muted-foreground">
+          {runPick}
+        </div>
       )}
       {showCopy && (
         <MessageCopyButton content={copyContent} />

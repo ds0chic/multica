@@ -2541,6 +2541,15 @@ func (h *Handler) buildClaimedTaskResponse(r *http.Request, task *db.AgentTaskQu
 		RuntimeConfig:         runtimeConfig,
 		DisabledRuntimeSkills: disabledRuntimeSkillsFor(agent.DisabledRuntimeSkills, runtimeID, runtime.Provider),
 	}
+	// A per-run selection (a chat message's model / effort pick) wins over the
+	// agent's saved values for this task only. The daemon already validates the
+	// level against the model's catalog and drops an unsupported one.
+	if task.ModelOverride.Valid && task.ModelOverride.String != "" {
+		resp.Agent.Model = task.ModelOverride.String
+	}
+	if task.ThinkingLevelOverride.Valid && task.ThinkingLevelOverride.String != "" {
+		resp.Agent.ThinkingLevel = task.ThinkingLevelOverride.String
+	}
 	// System agents carry a product-owned instruction layer that ships with
 	// this binary instead of being copied into their row at creation. That
 	// is what makes it hot-updatable: editing the embedded file and

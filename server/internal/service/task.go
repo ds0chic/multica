@@ -2311,6 +2311,14 @@ type DirectChatSendResult struct {
 	InitialTitle       string
 }
 
+// ChatRunOverrides is a per-message model / thinking-level selection. Empty
+// fields mean "no override": the claim falls back to the agent's saved value.
+// The handler validates both against the agent's runtime before passing them.
+type ChatRunOverrides struct {
+	Model         string
+	ThinkingLevel string
+}
+
 var ErrChatSessionAlreadyStarted = errors.New("chat session already has a user message")
 
 // SendDirectChatMessage atomically persists one web/mobile direct-chat turn:
@@ -2333,6 +2341,7 @@ func (s *TaskService) SendDirectChatMessage(
 	attachmentIDs []pgtype.UUID,
 	uploaderType string,
 	uploaderID pgtype.UUID,
+	overrides ChatRunOverrides,
 ) (*DirectChatSendResult, error) {
 	// Build the per-task Composio overlay before the transaction — it can do
 	// network I/O and must not run with a DB transaction open.
@@ -2394,20 +2403,22 @@ func (s *TaskService) SendDirectChatMessage(
 		out.Queued = queued
 
 		task, err := qtx.CreateChatTask(ctx, db.CreateChatTaskParams{
-			ID:                   dbid.NewV7(),
-			AgentID:              session.AgentID,
-			RuntimeID:            carrier.RuntimeID,
-			Priority:             2, // medium priority for chat; matches EnqueueChatTask
-			ChatSessionID:        session.ID,
-			InitiatorUserID:      initiatorUserID,
-			OriginatorUserID:     attr.UserID,
-			AccountableUserID:    attr.AccountableUserID,
-			ForceFreshSession:    pgtype.Bool{Bool: false, Valid: true},
-			RuntimeMcpOverlay:    overlay.Overlay,
-			RuntimeConnectedApps: overlay.ConnectedApps,
-			OriginatorSource:     attrSource,
-			TriggerEvidenceKind:  attrEvidenceKind,
-			TriggerEvidenceRefID: attrEvidenceRef,
+			ID:                    dbid.NewV7(),
+			AgentID:               session.AgentID,
+			RuntimeID:             carrier.RuntimeID,
+			Priority:              2, // medium priority for chat; matches EnqueueChatTask
+			ChatSessionID:         session.ID,
+			InitiatorUserID:       initiatorUserID,
+			OriginatorUserID:      attr.UserID,
+			AccountableUserID:     attr.AccountableUserID,
+			ForceFreshSession:     pgtype.Bool{Bool: false, Valid: true},
+			RuntimeMcpOverlay:     overlay.Overlay,
+			RuntimeConnectedApps:  overlay.ConnectedApps,
+			OriginatorSource:      attrSource,
+			TriggerEvidenceKind:   attrEvidenceKind,
+			TriggerEvidenceRefID:  attrEvidenceRef,
+			ModelOverride:         util.StrToText(overrides.Model),
+			ThinkingLevelOverride: util.StrToText(overrides.ThinkingLevel),
 		})
 		if err != nil {
 			return fmt.Errorf("create direct chat task: %w", err)
@@ -7419,9 +7430,11 @@ func (s *TaskService) broadcastChatDone(ctx context.Context, task db.AgentTaskQu
 		return
 	}
 	payload := protocol.ChatDonePayload{
-		ChatSessionID:       util.UUIDToString(task.ChatSessionID),
-		TaskID:              util.UUIDToString(task.ID),
-		QuickActionsPending: quickActionsPending,
+		ChatSessionID:         util.UUIDToString(task.ChatSessionID),
+		TaskID:                util.UUIDToString(task.ID),
+		QuickActionsPending:   quickActionsPending,
+		ModelOverride:         task.ModelOverride.String,
+		ThinkingLevelOverride: task.ThinkingLevelOverride.String,
 	}
 	if msg != nil {
 		payload.MessageID = util.UUIDToString(msg.ID)

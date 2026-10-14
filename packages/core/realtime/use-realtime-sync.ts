@@ -231,6 +231,10 @@ export function applyChatDoneToCache(
       ...(payload.quick_actions !== undefined
         ? { quick_actions: payload.quick_actions }
         : {}),
+      ...(payload.model_override ? { model_override: payload.model_override } : {}),
+      ...(payload.thinking_level_override
+        ? { thinking_level_override: payload.thinking_level_override }
+        : {}),
     };
     // Idempotent against reconnect replay and against a refetch that already
     // landed this row.

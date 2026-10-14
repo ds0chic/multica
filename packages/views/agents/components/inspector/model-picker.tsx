@@ -37,6 +37,7 @@ export function ModelPicker({
   canEdit = true,
   variant = "chip",
   showLabel = true,
+  leadingIcon = false,
   onChange,
 }: {
   runtimeId: string | null;
@@ -46,6 +47,8 @@ export function ModelPicker({
   canEdit?: boolean;
   variant?: "chip" | "field";
   showLabel?: boolean;
+  /** Show the field variant's icon on the chip too, for chips without a row label. */
+  leadingIcon?: boolean;
   onChange: (next: string) => Promise<void> | void;
 }) {
   const { t } = useT("agents");
@@ -180,6 +183,11 @@ export function ModelPicker({
           {variant === "field" ? (
             <Cpu
               className="h-4 w-4 shrink-0 text-muted-foreground"
+              aria-hidden="true"
+            />
+          ) : leadingIcon ? (
+            <Cpu
+              className="h-3.5 w-3.5 shrink-0 text-muted-foreground"
               aria-hidden="true"
             />
           ) : null}

@@ -172,6 +172,12 @@ export interface ChatMessage {
   message_kind?: ChatMessageKind;
   /** Up to three server-validated follow-ups generated with this reply. */
   quick_actions?: ChatQuickAction[];
+  /**
+   * Per-message model / thinking-level pick this turn ran with. Absent when
+   * the turn used the agent's own settings, and on older servers.
+   */
+  model_override?: string;
+  thinking_level_override?: string;
 }
 
 export interface ChatMessagesCursor {
@@ -184,6 +190,15 @@ export interface ChatMessagesPage {
   limit: number;
   has_more: boolean;
   next_cursor?: ChatMessagesCursor | null;
+}
+
+/**
+ * Per-message model / thinking-level selection sent with a chat message.
+ * Empty or missing fields mean "use the agent's saved setting".
+ */
+export interface ChatRunOptions {
+  model?: string;
+  thinkingLevel?: string;
 }
 
 export interface SendChatMessageResponse {
