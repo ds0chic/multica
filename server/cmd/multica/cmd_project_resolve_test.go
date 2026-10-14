@@ -61,3 +61,21 @@ func TestResolveProjectIDByTitle(t *testing.T) {
 		t.Fatalf("unknown project error = %v, want a project-not-found error", err)
 	}
 }
+
+// An unknown title gets a plain "no project titled" error, not the ID-prefix
+// path's complaint about hex characters.
+func TestResolveProjectIDUnknownTitle(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(map[string]any{"projects": []map[string]any{
+			{"id": "aaaaaaaa-0000-4000-8000-000000000001", "title": "Website", "status": "planned"},
+		}})
+	}))
+	defer srv.Close()
+	client := cli.NewAPIClient(srv.URL, "ws-1", "test-token")
+
+	_, err := resolveProjectID(context.Background(), client, "No Such Project")
+	if err == nil || err.Error() != `no project titled "No Such Project"` {
+		t.Fatalf("unknown title error = %v, want a no-project-titled error", err)
+	}
+}
