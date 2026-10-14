@@ -62,6 +62,20 @@ vi.mock("@multica/core/autopilots/mutations", () => ({
 }));
 
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
+// The assignee agent's model / thinking section reads the signed-in user and
+// the runtime catalog; an offline runtime keeps it to the agent's own values.
+vi.mock("@multica/core/auth", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@multica/core/auth")>()),
+  useAuthStore: (selector: (state: { user: { id: string } }) => unknown) =>
+    selector({ user: { id: "user-1" } }),
+}));
+vi.mock("@multica/core/runtimes", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@multica/core/runtimes")>()),
+  runtimeListOptions: (wsId: string) => ({
+    queryKey: ["runtimes", wsId],
+    queryFn: async () => [],
+  }),
+}));
 
 vi.mock("../../editor", () => ({
   TitleEditor: ({ ref, defaultValue, placeholder, onChange, onSubmit }: any) => {

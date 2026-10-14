@@ -295,6 +295,7 @@
     "toast_update_failed": "Échec de la mise à jour de l'automatisation",
     "section_agent": "Agent",
     "section_assignee": "Assigné à",
+    "section_run_model": "Modèle et réflexion",
     "select_agent": "Sélectionner un agent",
     "select_assignee": "Sélectionner un agent ou un squad",
     "section_project": "Projet",

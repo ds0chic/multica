@@ -1,0 +1,2 @@
+ALTER TABLE autopilot DROP COLUMN IF EXISTS thinking_level;
+ALTER TABLE autopilot DROP COLUMN IF EXISTS model;

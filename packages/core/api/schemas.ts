@@ -2438,6 +2438,8 @@ const AutopilotListItemSchema = z.object({
   status: z.string(),
   execution_mode: z.string(),
   issue_title_template: z.string().nullable().optional(),
+  model: z.string().nullable().optional(),
+  thinking_level: z.string().nullable().optional(),
   created_by_type: z.string(),
   created_by_id: z.string(),
   last_run_at: z.string().nullable().optional(),

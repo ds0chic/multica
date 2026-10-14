@@ -2541,8 +2541,31 @@ func (h *Handler) buildClaimedTaskResponse(r *http.Request, task *db.AgentTaskQu
 		RuntimeConfig:         runtimeConfig,
 		DisabledRuntimeSkills: disabledRuntimeSkillsFor(agent.DisabledRuntimeSkills, runtimeID, runtime.Provider),
 	}
-	// A per-run selection (a chat message's model / effort pick) wins over the
-	// agent's saved values for this task only. The daemon already validates the
+	// An autopilot's own model / effort pick wins over the agent's saved
+	// values for the runs it starts (its run_only task, and every run of its
+	// assignee on the issue it created). The daemon still validates the level
+	// against the model's catalog and drops an unsupported one.
+	if task.AutopilotRunID.Valid || task.IssueID.Valid {
+		defaults, err := h.Queries.GetAutopilotRunDefaultsForTask(r.Context(), db.GetAutopilotRunDefaultsForTaskParams{
+			AgentID:        task.AgentID,
+			AutopilotRunID: task.AutopilotRunID,
+			IssueID:        task.IssueID,
+		})
+		switch {
+		case err == nil:
+			if defaults.Model.Valid && defaults.Model.String != "" {
+				resp.Agent.Model = defaults.Model.String
+			}
+			if defaults.ThinkingLevel.Valid && defaults.ThinkingLevel.String != "" {
+				resp.Agent.ThinkingLevel = defaults.ThinkingLevel.String
+			}
+		case !errors.Is(err, pgx.ErrNoRows):
+			// Degrade to the agent's own settings rather than failing the run.
+			slog.Warn("claim: load autopilot run defaults failed", "task_id", uuidToString(task.ID), "error", err)
+		}
+	}
+	// A per-run selection (a chat message's model / effort pick) wins over both
+	// the agent's saved values and an autopilot's pick for this task only. The daemon already validates the
 	// level against the model's catalog and drops an unsupported one.
 	if task.ModelOverride.Valid && task.ModelOverride.String != "" {
 		resp.Agent.Model = task.ModelOverride.String

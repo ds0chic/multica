@@ -39,6 +39,12 @@ import { Button } from "@multica/ui/components/ui/button";
 import { useCurrentWorkspace } from "@multica/core/paths";
 import { useWorkspaceId } from "@multica/core/hooks";
 import { agentListOptions, squadListOptions } from "@multica/core/workspace/queries";
+import { useAuthStore } from "@multica/core/auth";
+import {
+  isRuntimeUsableForUser,
+  runtimeListOptions,
+  runtimeModelsOptions,
+} from "@multica/core/runtimes";
 import { projectListOptions } from "@multica/core/projects/queries";
 import {
   useCreateAutopilot,
@@ -49,6 +55,7 @@ import {
 import { buildAutopilotWebhookUrl } from "@multica/core/autopilots";
 import { api } from "@multica/core/api";
 import type {
+  Agent,
   AutopilotAssigneeType,
   AutopilotCollaborator,
   AutopilotExecutionMode,
@@ -60,6 +67,9 @@ import { SegmentedToggle } from "../../common/segmented-toggle";
 import { ProjectPicker } from "../../projects/components/project-picker";
 import { ProjectIcon } from "../../projects/components/project-icon";
 import { AgentPicker, type AssigneeSelection } from "./pickers/agent-picker";
+import { ModelPicker } from "../../agents/components/inspector/model-picker";
+import { ThinkingPicker } from "../../agents/components/inspector/thinking-picker";
+import { pickModelEntry } from "../../agents/components/inspector/thinking-prop-row";
 import { SubscriberMultiSelect } from "./subscriber-multi-select";
 import { AutopilotAccessManager } from "./autopilot-access-manager";
 import { ScheduleEditor } from "./schedule-editor/schedule-editor";
@@ -84,6 +94,9 @@ export interface AutopilotInitial {
   assignee_type: AutopilotAssigneeType;
   assignee_id: string;
   execution_mode: AutopilotExecutionMode;
+  /** Run model / thinking level; empty or null = the agent's own setting. */
+  model?: string | null;
+  thinking_level?: string | null;
   subscriber_user_ids?: string[];
 }
 
@@ -163,6 +176,9 @@ export function AutopilotDialog(props: AutopilotDialogProps) {
   const [subscriberUserIds, setSubscriberUserIds] = useState<string[]>(
     initial.subscriber_user_ids ?? [],
   );
+  // "" = run with the assignee agent's own model / thinking level.
+  const [runModel, setRunModel] = useState(initial.model ?? "");
+  const [runThinking, setRunThinking] = useState(initial.thinking_level ?? "");
 
   // The schedule panel speaks for the autopilot's SCHEDULE trigger, not for
   // `triggers[0]` — on a webhook- or api-triggered autopilot that row is one no
@@ -258,7 +274,15 @@ export function AutopilotDialog(props: AutopilotDialogProps) {
     [projects, projectId],
   );
 
+  const assigneeAgent =
+    assigneeType === "agent" ? agents.find((a) => a.id === assigneeId) : undefined;
+
   const handleAssigneeChange = (next: AssigneeSelection) => {
+    // Model ids belong to the old agent's runtime; start the new one clean.
+    if (next.type !== assigneeType || next.id !== assigneeId) {
+      setRunModel("");
+      setRunThinking("");
+    }
     setAssigneeType(next.type);
     setAssigneeId(next.id);
   };
@@ -327,6 +351,9 @@ export function AutopilotDialog(props: AutopilotDialogProps) {
           assignee_type: assigneeType,
           assignee_id: assigneeId,
           execution_mode: executionMode,
+          ...(assigneeType === "agent"
+            ? { model: runModel || undefined, thinking_level: runThinking || undefined }
+            : {}),
           subscribers: subscriberUserIds.map((user_id) => ({
             user_type: "member" as const,
             user_id,
@@ -380,6 +407,11 @@ export function AutopilotDialog(props: AutopilotDialogProps) {
           assignee_type: assigneeType,
           assignee_id: assigneeId,
           execution_mode: executionMode,
+          // A squad assignee runs its leader's own settings; the server
+          // clears any pick left from an earlier agent assignee.
+          ...(assigneeType === "agent"
+            ? { model: runModel || null, thinking_level: runThinking || null }
+            : {}),
           subscribers: subscriberUserIds.map((user_id) => ({
             user_type: "member" as const,
             user_id,
@@ -627,6 +659,16 @@ export function AutopilotDialog(props: AutopilotDialogProps) {
               errorId={assigneeErrorId}
             />
 
+            {assigneeAgent && (
+              <RunModelSection
+                agent={assigneeAgent}
+                model={runModel}
+                thinkingLevel={runThinking}
+                onModelChange={setRunModel}
+                onThinkingChange={setRunThinking}
+              />
+            )}
+
             <OutputModeSection mode={executionMode} onChange={setExecutionMode} />
 
             {/* Shown for BOTH output modes (MUL-6681). The project is not only
@@ -839,6 +881,66 @@ function AgentSection({
           {t(($) => $.dialog.error_assignee_required)}
         </p>
       )}
+    </div>
+  );
+}
+
+/**
+ * Model and thinking level for this autopilot's runs. The chips show the
+ * agent's own settings until changed; picking the agent's value again clears
+ * the override, so an untouched autopilot follows later edits to the agent.
+ */
+function RunModelSection({
+  agent,
+  model,
+  thinkingLevel,
+  onModelChange,
+  onThinkingChange,
+}: {
+  agent: Agent;
+  model: string;
+  thinkingLevel: string;
+  onModelChange: (next: string) => void;
+  onThinkingChange: (next: string) => void;
+}) {
+  const { t } = useT("autopilots");
+  const wsId = useWorkspaceId();
+  const userId = useAuthStore((s) => s.user?.id);
+  const { data: runtimes = [] } = useQuery(runtimeListOptions(wsId));
+  const runtimeId = agent.runtime_id || null;
+  const runtime = runtimeId ? runtimes.find((r) => r.id === runtimeId) : undefined;
+  const canDiscover =
+    runtime?.status === "online" && isRuntimeUsableForUser(runtime, userId ?? null);
+  const modelsQuery = useQuery(runtimeModelsOptions(canDiscover ? runtimeId : null));
+
+  if (!runtimeId) return null;
+
+  const agentModel = agent.model ?? "";
+  const agentThinking = agent.thinking_level ?? "";
+  const shownModel = model || agentModel;
+  const shownThinking = thinkingLevel || agentThinking;
+  const levels =
+    pickModelEntry(modelsQuery.data?.models ?? [], shownModel, runtime?.provider ?? "")?.thinking
+      ?.supported_levels ?? [];
+
+  return (
+    <div>
+      <SectionLabel>{t(($) => $.dialog.section_run_model)}</SectionLabel>
+      <div className="flex flex-wrap items-center gap-1">
+        <ModelPicker
+          runtimeId={runtimeId}
+          runtimeOnline={canDiscover}
+          value={shownModel}
+          onChange={(next) => onModelChange(next === agentModel ? "" : next)}
+        />
+        {(levels.length > 0 || shownThinking) && (
+          <ThinkingPicker
+            value={shownThinking}
+            levels={levels}
+            onChange={(next) => onThinkingChange(next === agentThinking ? "" : next)}
+          />
+        )}
+      </div>
     </div>
   );
 }
