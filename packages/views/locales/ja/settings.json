@@ -646,15 +646,15 @@
     "groups": {
       "assignments": {
         "label": "担当の割り当て",
-        "description": "タスクの担当者に割り当てられたとき、または解除されたとき"
+        "description": "タスクの担当者に割り当て・解除されたとき、またはフォロー対象に追加されたとき"
       },
       "status_changes": {
         "label": "ステータス変更",
-        "description": "フォロー中のタスクのステータスが変わったとき（例: todo、in progress、done）"
+        "description": "フォロー中のタスクのステータスが変わったとき、または担当タスクのサブタスクがすべて完了したとき"
       },
       "comments": {
         "label": "コメント",
-        "description": "フォロー中のタスクに新しいコメントが付いたとき"
+        "description": "フォロー中のタスクに新しいコメントが付いたとき、または自分のコメントにリアクションが付いたとき"
       },
       "mentions": {
         "label": "メンション",
@@ -666,7 +666,7 @@
       },
       "agent_activity": {
         "label": "エージェントのアクティビティ",
-        "description": "エージェントの実行が失敗したとき"
+        "description": "エージェントの実行が失敗したとき、またはエージェントでの作成が終わったとき"
       }
     },
     "system": {

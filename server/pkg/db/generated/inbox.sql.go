@@ -263,10 +263,15 @@ INSERT INTO inbox_item (
     actor_type, actor_id, details, id
 )
 SELECT $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, COALESCE($12::uuid, gen_random_uuid())
-WHERE ($2::text = 'member' AND EXISTS (
+WHERE (($2::text = 'member' AND EXISTS (
     SELECT 1 FROM member WHERE workspace_id = $1 AND user_id = $3
 )) OR ($2::text = 'agent' AND EXISTS (
     SELECT 1 FROM agent WHERE workspace_id = $1 AND id = $3
+)))
+AND NOT ($2::text = 'member' AND $13::text IS NOT NULL AND EXISTS (
+    SELECT 1 FROM notification_preference np
+    WHERE np.workspace_id = $1 AND np.user_id = $3
+      AND np.preferences ->> $13::text = 'muted'
 ))
 RETURNING id, workspace_id, recipient_type, recipient_id, type, severity, issue_id, title, body, read, archived, created_at, actor_type, actor_id, details
 `
@@ -284,10 +289,14 @@ type CreateInboxItemParams struct {
 	ActorID       pgtype.UUID `json:"actor_id"`
 	Details       []byte      `json:"details"`
 	ID            pgtype.UUID `json:"id"`
+	MuteGroup     pgtype.Text `json:"mute_group"`
 }
 
 // A missing recipient is a quiet skip (pgx.ErrNoRows), not a delivery failure.
 // Check the insertion snapshot without adding recipient row locks.
+// mute_group, when set, is the recipient's notification preference group for
+// this type (inbox.MuteGroup); a member who muted that group is skipped the
+// same quiet way, whichever code path writes the item.
 func (q *Queries) CreateInboxItem(ctx context.Context, arg CreateInboxItemParams) (InboxItem, error) {
 	row := q.db.QueryRow(ctx, createInboxItem,
 		arg.WorkspaceID,
@@ -302,6 +311,7 @@ func (q *Queries) CreateInboxItem(ctx context.Context, arg CreateInboxItemParams
 		arg.ActorID,
 		arg.Details,
 		arg.ID,
+		arg.MuteGroup,
 	)
 	var i InboxItem
 	err := row.Scan(

@@ -650,15 +650,15 @@
     "groups": {
       "assignments": {
         "label": "Assignments",
-        "description": "When you are assigned or unassigned from an issue"
+        "description": "When you are assigned, unassigned, or subscribed to an issue"
       },
       "status_changes": {
         "label": "Status changes",
-        "description": "When an issue you follow changes status (e.g. todo, in progress, done)"
+        "description": "When an issue you follow changes status, or all sub-issues of your issue are done"
       },
       "comments": {
         "label": "Comments",
-        "description": "New comments on issues you follow"
+        "description": "New comments on issues you follow, and reactions to your comments"
       },
       "mentions": {
         "label": "Mentions",
@@ -670,7 +670,7 @@
       },
       "agent_activity": {
         "label": "Agent activity",
-        "description": "When an agent run fails"
+        "description": "When an agent run fails, or an issue you asked an agent to create is done"
       }
     },
     "system": {
