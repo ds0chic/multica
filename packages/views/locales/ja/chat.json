@@ -247,5 +247,9 @@
     "delete": "チャットを削除",
     "archive": "チャットをアーカイブ",
     "unarchive": "アーカイブを解除"
+  },
+  "system_notification": {
+    "no_response": "返信なしで終了しました",
+    "failed": "返信に失敗しました。チャットを開いて理由を確認してください。"
   }
 }

@@ -27,6 +27,11 @@ export interface SystemNotificationPayload {
   issueKey: string;
   title: string;
   body: string;
+  /**
+   * Workspace path to open on click instead of the inbox (e.g. a chat
+   * session). Absent for inbox items.
+   */
+  path?: string;
 }
 
 type ClickHandler = (payload: SystemNotificationPayload) => void;
@@ -120,4 +125,26 @@ export function showWebNotification(payload: SystemNotificationPayload): void {
     notification.close();
     clickHandler?.(payload);
   };
+}
+
+/**
+ * Show a system notification through whichever host is present: the desktop
+ * preload bridge (native banner from the Electron main process) or, on web,
+ * the browser Notification API. Callers own the focus / mute gating.
+ */
+export function dispatchSystemNotification(
+  payload: SystemNotificationPayload,
+): void {
+  const desktopAPI = (
+    globalThis as unknown as {
+      desktopAPI?: {
+        showNotification?: (payload: SystemNotificationPayload) => void;
+      };
+    }
+  ).desktopAPI;
+  if (desktopAPI?.showNotification) {
+    desktopAPI.showNotification(payload);
+    return;
+  }
+  showWebNotification(payload);
 }

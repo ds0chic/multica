@@ -66,4 +66,23 @@ describe("parseNativeNotificationPayload", () => {
     };
     expect(parseNativeNotificationPayload(payload)).toEqual(payload);
   });
+
+  it("keeps an in-app click path and rejects anything else", () => {
+    const base = {
+      slug: "acme",
+      itemId: "chat:task-1",
+      issueKey: "session-1",
+      title: "Fix the login bug",
+      body: "Done.",
+    };
+    const chat = { ...base, path: "/acme/chat?session=session-1" };
+    expect(parseNativeNotificationPayload(chat)).toEqual(chat);
+    expect(
+      parseNativeNotificationPayload({ ...base, path: "https://evil.test" }),
+    ).toBeNull();
+    expect(
+      parseNativeNotificationPayload({ ...base, path: "//evil.test" }),
+    ).toBeNull();
+    expect(parseNativeNotificationPayload({ ...base, path: 42 })).toBeNull();
+  });
 });

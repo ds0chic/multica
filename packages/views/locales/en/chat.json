@@ -251,5 +251,9 @@
     "archive": "Archive chat",
     "unarchive": "Unarchive chat",
     "delete": "Delete chat"
+  },
+  "system_notification": {
+    "no_response": "Finished without a reply",
+    "failed": "Reply failed. Open the chat to see why."
   }
 }

@@ -251,5 +251,9 @@
     "archive": "Archiver la discussion",
     "unarchive": "Désarchiver la discussion",
     "delete": "Supprimer la discussion"
+  },
+  "system_notification": {
+    "no_response": "Terminé sans réponse",
+    "failed": "La réponse a échoué. Ouvrez la discussion pour voir pourquoi."
   }
 }

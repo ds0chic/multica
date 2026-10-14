@@ -31,10 +31,10 @@ export function WebNotificationBridge() {
 
   useEffect(() => {
     registerSystemNotificationClickHandler(
-      ({ slug, issueKey }: SystemNotificationPayload) => {
+      ({ slug, issueKey, path }: SystemNotificationPayload) => {
         if (!slug) return;
         const inboxPath = `${paths.workspace(slug).inbox()}?issue=${encodeURIComponent(issueKey)}`;
-        pushRef.current(inboxPath);
+        pushRef.current(path ?? inboxPath);
       },
     );
     return () => registerSystemNotificationClickHandler(null);
