@@ -3508,6 +3508,15 @@ func (h *Handler) CreateIssue(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusCreated, resp)
 }
 
+// withdrawPreviousOwnerRuns cancels the previous assignee's ownership run
+// that has not started yet. Best-effort: a failure leaves the run queued, the
+// pre-existing behavior, and is logged.
+func (h *Handler) withdrawPreviousOwnerRuns(r *http.Request, prevIssue db.Issue) {
+	if err := h.TaskService.CancelQueuedRunsForPreviousAssignee(r.Context(), prevIssue.ID, prevIssue.AssigneeType, prevIssue.AssigneeID); err != nil {
+		slog.Warn("withdraw previous owner's queued run failed", append(logger.RequestAttrs(r), "issue_id", uuidToString(prevIssue.ID), "error", err)...)
+	}
+}
+
 type UpdateIssueRequest struct {
 	ExpectedRevision *int64  `json:"expected_revision,omitempty"`
 	Title            *string `json:"title"`
@@ -4078,18 +4087,23 @@ func (h *Handler) UpdateIssue(w http.ResponseWriter, r *http.Request) {
 	// WillEnqueueRun predicate, shared verbatim with the preview endpoint so
 	// the two never drift (MUL-3375).
 	//
-	// A reassignment intentionally does NOT cancel existing tasks on the issue
-	// (#4963 / MUL-4113). The previous "cancel every active task on the issue"
-	// was too coarse: it silently dropped unrelated in-flight work (a
-	// mention-triggered run for another agent, a squad task) with no requeue,
-	// and it self-cancelled a run that reassigned the issue from inside itself.
+	// A reassignment does NOT cancel in-flight tasks on the issue (#4963 /
+	// MUL-4113). The previous "cancel every active task on the issue" was too
+	// coarse: it silently dropped unrelated in-flight work (a mention-triggered
+	// run for another agent, a squad task) with no requeue, and it
+	// self-cancelled a run that reassigned the issue from inside itself.
 	// Ownership handoff no longer implies interruption; the new assignee's run,
 	// if any, is enqueued by WillEnqueueRun below and runs alongside whatever
-	// was already in flight. No status change — not even → cancelled — cancels
+	// was already in flight. The previous owner's ownership run that has not
+	// started yet is withdrawn, though: left queued it would start after the
+	// handoff and both owners would work the issue. No status change — not even → cancelled — cancels
 	// active tasks: a user clicking "cancel" on an issue has no expectation that
 	// it stops in-flight agent runs, so that implicit coupling is gone
 	// (MUL-4465). Deleting an issue still cancels its tasks (see DeleteIssue),
 	// because the tasks' owning issue ceases to exist.
+	if assigneeChanged {
+		h.withdrawPreviousOwnerRuns(r, prevIssue)
+	}
 	if trigger, ok := h.IssueService.WillEnqueueRun(r.Context(),
 		service.IssueTriggerInput{
 			Issue:           issue,
@@ -4814,8 +4828,12 @@ func (h *Handler) BatchUpdateIssues(w http.ResponseWriter, r *http.Request) {
 			"prev_duplicate_of_issue_id": liveDuplicateMark(prevIssue.Status, prevIssue.DuplicateOfIssueID),
 		})
 
-		// Reassignment does not cancel existing tasks (#4963 / MUL-4113) —
-		// mirrors UpdateIssue. See that handler for the rationale.
+		// Reassignment does not cancel in-flight tasks (#4963 / MUL-4113) but
+		// withdraws the previous owner's unstarted run — mirrors UpdateIssue.
+		// See that handler for the rationale.
+		if assigneeChanged {
+			h.withdrawPreviousOwnerRuns(r, prevIssue)
+		}
 		//
 		// Same single predicate as UpdateIssue — batch must not grow its own
 		// copy of the enqueue rule (the historical source of four-entry-point

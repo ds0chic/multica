@@ -662,6 +662,26 @@ WHERE issue_id = $1 AND agent_id = $2
   AND status IN ('queued', 'dispatched', 'deferred')
 RETURNING *;
 
+-- name: CancelQueuedOwnerRunsForIssue :many
+-- Withdraws the previous assignee's not-yet-started ownership runs when an
+-- issue is reassigned, so the old and new owner don't both work it. Only runs
+-- with no trigger comment are touched: a run someone asked for by mentioning
+-- the agent stays. Running/dispatched rows are left alone; stopping a run in
+-- progress stays an explicit CancelTask. Pass agent_id for an agent assignee
+-- or squad_id for a squad (its leader's task).
+UPDATE agent_task_queue
+SET status = 'cancelled', completed_at = now(), prepare_lease_expires_at = NULL,
+    cancelled_by_type = 'system', cancelled_by_id = NULL, cancelled_by_name = NULL
+WHERE issue_id = sqlc.arg('issue_id')
+  AND status IN ('queued', 'deferred')
+  AND trigger_comment_id IS NULL
+  AND chat_session_id IS NULL
+  AND (
+    (sqlc.narg('agent_id')::uuid IS NOT NULL AND agent_id = sqlc.narg('agent_id')::uuid AND NOT is_leader_task)
+    OR (sqlc.narg('squad_id')::uuid IS NOT NULL AND squad_id = sqlc.narg('squad_id')::uuid AND is_leader_task)
+  )
+RETURNING *;
+
 -- name: CancelPendingTasksByIssueAndAgentInThread :many
 -- Cancel only the not-yet-started plan in the selected thread. Other threads
 -- retain their queues; running tasks are stopped explicitly through CancelTask.
