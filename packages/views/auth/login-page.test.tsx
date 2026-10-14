@@ -82,6 +82,7 @@ vi.mock("@multica/core/types", () => ({}));
 // ---------------------------------------------------------------------------
 
 import { LoginPage, validateCliCallback } from "./login-page";
+import { configStore } from "@multica/core/config";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -216,6 +217,28 @@ describe("LoginPage", () => {
       ).toBeInTheDocument();
     });
     expect(screen.getByText(/test@example.com/)).toBeInTheDocument();
+  });
+
+  it("points at the server log when the server has no email provider", async () => {
+    configStore.getState().setVerificationCodeInServerLog(true);
+    try {
+      mockSendCode.mockResolvedValueOnce(undefined);
+      renderWithI18n(<LoginPage onSuccess={onSuccess} />);
+
+      const user = userEvent.setup();
+      await user.type(screen.getByLabelText(/email/i), "test@example.com");
+      await user.click(screen.getByRole("button", { name: /continue/i }));
+
+      await waitFor(() => {
+        expect(
+          screen.getByText(/find your code in the server log/i),
+        ).toBeInTheDocument();
+      });
+      expect(screen.queryByText(/check your email/i)).not.toBeInTheDocument();
+      expect(screen.getByText(/test@example.com/)).toBeInTheDocument();
+    } finally {
+      configStore.getState().setVerificationCodeInServerLog(false);
+    }
   });
 
   it("autofocuses the OTP input when the code step opens", async () => {

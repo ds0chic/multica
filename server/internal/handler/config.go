@@ -103,6 +103,12 @@ type AppConfig struct {
 	// which is continuously deployed so its users can't act on the version —
 	// and empty for dev builds that aren't stamped via -X main.version.
 	ServerVersion string `json:"server_version,omitempty"`
+
+	// VerificationCodeInServerLog tells the login screen that this server has
+	// no email provider, so the code it just "sent" was written to the backend
+	// log. Without it the screen says "check your email" and the operator has
+	// nowhere to look. Self-host only; omitted when false.
+	VerificationCodeInServerLog bool `json:"verification_code_in_server_log,omitempty"`
 }
 
 // GetConfig is mounted on the public (unauthenticated) route group because
@@ -134,6 +140,7 @@ func (h *Handler) GetConfig(w http.ResponseWriter, r *http.Request) {
 	// the Help popover's version row would just be noise there (MUL-4108).
 	if !isOfficialCloudDeployment() {
 		config.ServerVersion = h.cfg.ServerVersion
+		config.VerificationCodeInServerLog = h.EmailService != nil && h.EmailService.WritesCodesToLog()
 	}
 
 	// Re-read from env on every request so operators can rotate keys via

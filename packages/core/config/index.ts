@@ -26,6 +26,9 @@ interface ConfigState {
   // self-hosted operators can confirm what's deployed. Empty for dev builds
   // or servers older than this feature.
   serverVersion: string;
+  // Self-host without an email provider: the login screen points at the
+  // server log instead of saying "check your email".
+  verificationCodeInServerLog: boolean;
   // Whether the connected server validates local_directory execution_mode.
   // Defaults to false, and stays false for any server that does not declare it:
   // the dangerous ones accept worktree mode, drop the field, and run the task
@@ -58,6 +61,7 @@ interface ConfigState {
   }) => void;
   setFeatureFlags: (flags?: Record<string, boolean>) => void;
   setServerVersion: (version?: string) => void;
+  setVerificationCodeInServerLog: (inLog?: boolean) => void;
   setLocalWorktreeSupported: (supported?: boolean) => void;
   setAgentConversationStartersSupported: (supported?: boolean) => void;
   setIssueCreatePropertiesSupported: (supported?: boolean) => void;
@@ -76,6 +80,7 @@ export const configStore = createStore<ConfigState>((set) => ({
   vcsIntegrationAvailable: false,
   featureFlags: {},
   serverVersion: "",
+  verificationCodeInServerLog: false,
   localWorktreeSupported: false,
   agentConversationStartersSupported: false,
   issueCreatePropertiesSupported: false,
@@ -92,6 +97,8 @@ export const configStore = createStore<ConfigState>((set) => ({
     set({ daemonServerUrl, daemonAppUrl }),
   setFeatureFlags: (flags = {}) => set({ featureFlags: { ...flags } }),
   setServerVersion: (version = "") => set({ serverVersion: version }),
+  setVerificationCodeInServerLog: (inLog = false) =>
+    set({ verificationCodeInServerLog: inLog === true }),
   setLocalWorktreeSupported: (supported = false) =>
     set({ localWorktreeSupported: supported === true }),
   setAgentConversationStartersSupported: (supported = false) =>

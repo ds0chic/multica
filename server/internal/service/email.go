@@ -334,6 +334,12 @@ func (s *EmailService) sendSMTP(to, subject, htmlBody string) error {
 	return c.Quit()
 }
 
+// WritesCodesToLog reports whether verification codes go to the server log
+// instead of email, because neither SMTP nor Resend is configured.
+func (s *EmailService) WritesCodesToLog() bool {
+	return s.smtpHost == "" && s.client == nil
+}
+
 // SendVerificationCode sends a one-time login code. The code is server-generated
 // (6-digit numeric) so no user-controlled text reaches the email body here.
 // Delivery priority: SMTP relay → Resend API → DEV stdout.
