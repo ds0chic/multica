@@ -345,12 +345,18 @@ func runRuntimeUpdate(cmd *cobra.Command, args []string) error {
 		if status == "completed" || status == "failed" || status == "timeout" {
 			output, _ := cmd.Flags().GetString("output")
 			if output == "json" {
-				return cli.PrintJSON(os.Stdout, update)
-			}
-			if status == "completed" {
+				if err := cli.PrintJSON(os.Stdout, update); err != nil {
+					return err
+				}
+			} else if status == "completed" {
 				fmt.Printf("Update completed: %s\n", strVal(update, "output"))
 			} else {
 				fmt.Printf("Update %s: %s\n", status, strVal(update, "error"))
+			}
+			if status != "completed" {
+				// A failed or timed-out update must fail the command so a
+				// script chaining on --wait stops instead of carrying on.
+				return fmt.Errorf("runtime update %s", status)
 			}
 			return nil
 		}
