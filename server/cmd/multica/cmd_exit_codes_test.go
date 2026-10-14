@@ -18,8 +18,11 @@ func TestRuntimeUpdateWaitFailsWhenUpdateFails(t *testing.T) {
 	t.Setenv("MULTICA_TOKEN", "test-token")
 	t.Setenv("MULTICA_WORKSPACE_ID", "ws-123")
 
-	for _, status := range []string{"failed", "timeout"} {
-		t.Run(status, func(t *testing.T) {
+	for _, tc := range []struct{ status, output string }{
+		{"failed", "table"}, {"timeout", "table"}, {"failed", "json"},
+	} {
+		status := tc.status
+		t.Run(status+"/"+tc.output, func(t *testing.T) {
 			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.Header().Set("Content-Type", "application/json")
 				st := "pending"
@@ -34,7 +37,7 @@ func TestRuntimeUpdateWaitFailsWhenUpdateFails(t *testing.T) {
 			cmd := &cobra.Command{}
 			cmd.Flags().String("target-version", "v9.9.9", "")
 			cmd.Flags().Bool("wait", true, "")
-			cmd.Flags().String("output", "table", "")
+			cmd.Flags().String("output", tc.output, "")
 
 			done := make(chan error, 1)
 			go func() { done <- runRuntimeUpdate(cmd, []string{"rt-1"}) }()
