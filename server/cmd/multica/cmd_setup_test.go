@@ -75,6 +75,72 @@ func TestPersistSelfHostConfigIfReachable(t *testing.T) {
 	})
 }
 
+// TestSetupKeepsDaemonSettings covers re-running `setup self-host` (the
+// documented way to re-login or restart the daemon): it must change only the
+// connection and keep what the user saved with `multica config set`.
+func TestSetupKeepsDaemonSettings(t *testing.T) {
+	timeout := "45m"
+	seed := func(t *testing.T) {
+		t.Helper()
+		redirectTestHome(t, t.TempDir())
+		if err := cli.SaveCLIConfig(cli.CLIConfig{
+			ServerURL:          "https://api.old.example",
+			AppURL:             "https://old.example",
+			WorkspaceID:        "ws-1",
+			Token:              "mul_existing_token",
+			DeviceName:         "studio",
+			WorkspacesRoot:     "/data/multica",
+			MaxConcurrentTasks: 3,
+			AgentTimeout:       &timeout,
+			DisableAutoUpdate:  true,
+		}); err != nil {
+			t.Fatalf("seed config: %v", err)
+		}
+	}
+	reachable := func(string) bool { return true }
+
+	t.Run("same server keeps workspace and daemon settings", func(t *testing.T) {
+		seed(t)
+		if _, err := persistSelfHostConfigIfReachable("https://api.old.example", "https://old.example", "", reachable); err != nil {
+			t.Fatalf("persist: %v", err)
+		}
+		got, err := cli.LoadCLIConfig()
+		if err != nil {
+			t.Fatalf("load config: %v", err)
+		}
+		if got.WorkspaceID != "ws-1" {
+			t.Errorf("workspace_id: want kept, got %q", got.WorkspaceID)
+		}
+		if got.Token != "" {
+			t.Errorf("token: want cleared for the new login, got %q", got.Token)
+		}
+		if got.DeviceName != "studio" || got.WorkspacesRoot != "/data/multica" || got.MaxConcurrentTasks != 3 ||
+			got.AgentTimeout == nil || *got.AgentTimeout != "45m" || !got.DisableAutoUpdate {
+			t.Errorf("daemon settings: want kept, got %+v", got)
+		}
+	})
+
+	t.Run("new server drops only the workspace", func(t *testing.T) {
+		seed(t)
+		if _, err := persistSelfHostConfigIfReachable("https://api.new.example", "https://new.example", "", reachable); err != nil {
+			t.Fatalf("persist: %v", err)
+		}
+		got, err := cli.LoadCLIConfig()
+		if err != nil {
+			t.Fatalf("load config: %v", err)
+		}
+		if got.ServerURL != "https://api.new.example" || got.AppURL != "https://new.example" {
+			t.Errorf("urls: got %q / %q", got.ServerURL, got.AppURL)
+		}
+		if got.WorkspaceID != "" {
+			t.Errorf("workspace_id: want cleared on a new server, got %q", got.WorkspaceID)
+		}
+		if got.WorkspacesRoot != "/data/multica" || got.MaxConcurrentTasks != 3 {
+			t.Errorf("daemon settings: want kept, got %+v", got)
+		}
+	})
+}
+
 func TestDispatchDaemonAfterSetup(t *testing.T) {
 	newRunner := func(calls *[]string, name string) func(*cobra.Command, []string) error {
 		return func(*cobra.Command, []string) error {
