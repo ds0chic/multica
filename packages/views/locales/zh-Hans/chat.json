@@ -247,5 +247,9 @@
     "delete": "删除会话",
     "archive": "归档会话",
     "unarchive": "取消归档"
+  },
+  "system_notification": {
+    "no_response": "已结束，没有回复内容",
+    "failed": "回复失败，打开聊天查看原因"
   }
 }

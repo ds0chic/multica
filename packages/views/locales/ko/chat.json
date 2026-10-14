@@ -247,5 +247,9 @@
     "delete": "채팅 삭제",
     "archive": "채팅 보관",
     "unarchive": "채팅 보관 해제"
+  },
+  "system_notification": {
+    "no_response": "답장 없이 종료되었습니다",
+    "failed": "답장에 실패했습니다. 채팅을 열어 원인을 확인하세요."
   }
 }

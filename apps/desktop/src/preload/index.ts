@@ -172,6 +172,8 @@ const desktopAPI = {
     issueKey: string;
     title: string;
     body: string;
+    /** Workspace path to open on click instead of the inbox. */
+    path?: string;
   }) => ipcRenderer.send("notification:show", payload),
   /**
    * Update the OS dock / taskbar unread badge. Pass 0 to clear. Values
@@ -190,6 +192,7 @@ const desktopAPI = {
       slug: string;
       itemId: string;
       issueKey: string;
+      path?: string;
     }) => void,
   ) => subscribeToMainRendererChannel("inbox:open", callback),
   /** Listen for native macOS back/forward swipe gestures. */

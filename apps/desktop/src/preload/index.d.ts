@@ -59,6 +59,8 @@ interface DesktopAPI {
     issueKey: string;
     title: string;
     body: string;
+    /** Workspace path to open on click instead of the inbox. */
+    path?: string;
   }) => void;
   /** Update the OS dock / taskbar unread badge. Pass 0 to clear. */
   setUnreadBadge: (count: number) => void;
@@ -68,6 +70,7 @@ interface DesktopAPI {
       slug: string;
       itemId: string;
       issueKey: string;
+      path?: string;
     }) => void,
   ) => () => void;
   /** Listen for native macOS back/forward swipe gestures. Returns an unsubscribe function. */

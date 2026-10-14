@@ -28,14 +28,18 @@ export interface NativeNotificationPayload {
   issueKey: string;
   title: string;
   body: string;
+  /** Workspace path the click opens instead of the inbox. */
+  path?: string;
 }
+
+const PATH_LIMIT = 1_024;
 
 export function parseNativeNotificationPayload(
   value: unknown,
 ): NativeNotificationPayload | null {
   if (!value || typeof value !== "object") return null;
   const candidate = value as Record<string, unknown>;
-  const limits: Record<keyof NativeNotificationPayload, number> = {
+  const limits: Record<Exclude<keyof NativeNotificationPayload, "path">, number> = {
     slug: 256,
     itemId: 256,
     issueKey: 256,
@@ -43,7 +47,7 @@ export function parseNativeNotificationPayload(
     body: 2_000,
   };
   const result = {} as NativeNotificationPayload;
-  for (const key of Object.keys(limits) as (keyof NativeNotificationPayload)[]) {
+  for (const key of Object.keys(limits) as (keyof typeof limits)[]) {
     const field = candidate[key];
     const mayBeEmpty = key === "slug" || key === "body";
     if (
@@ -54,6 +58,20 @@ export function parseNativeNotificationPayload(
       return null;
     }
     result[key] = field;
+  }
+  // Optional: absent on inbox banners. Only an in-app absolute path is
+  // accepted, since the renderer pushes it straight into the router.
+  const path = candidate.path;
+  if (path !== undefined) {
+    if (
+      typeof path !== "string" ||
+      !path.startsWith("/") ||
+      path.startsWith("//") ||
+      path.length > PATH_LIMIT
+    ) {
+      return null;
+    }
+    result.path = path;
   }
   return result;
 }

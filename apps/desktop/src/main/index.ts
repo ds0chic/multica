@@ -816,6 +816,7 @@ if (!gotTheLock) {
           slug: payload.slug,
           itemId: payload.itemId,
           issueKey: payload.issueKey,
+          ...(payload.path ? { path: payload.path } : {}),
         });
       });
       notification.show();
