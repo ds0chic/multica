@@ -3064,6 +3064,10 @@ type CreateIssueRequest struct {
 	OriginID   *string `json:"origin_id,omitempty"`
 
 	AllowDuplicate bool `json:"allow_duplicate,omitempty"`
+	// SuppressRun keeps the assignee but skips the run the assignment would
+	// start, matching UpdateIssueRequest.SuppressRun. Optional; omitted or
+	// false keeps today's behavior.
+	SuppressRun bool `json:"suppress_run,omitempty"`
 }
 
 // UnmarshalJSON rejects duplicate object members before Go's ordinary map
@@ -3432,9 +3436,10 @@ func (h *Handler) CreateIssue(w http.ResponseWriter, r *http.Request) {
 		Properties:     properties,
 		AllowDuplicate: req.AllowDuplicate,
 	}, service.IssueCreateOpts{
-		ActorID:          actualCreatorID,
-		AnalyticsAgentID: analyticsAgentID,
-		Platform:         func() string { p, _, _ := middleware.ClientMetadataFromContext(r.Context()); return p }(),
+		ActorID:             actualCreatorID,
+		AnalyticsAgentID:    analyticsAgentID,
+		SuppressAssignedRun: req.SuppressRun,
+		Platform:            func() string { p, _, _ := middleware.ClientMetadataFromContext(r.Context()); return p }(),
 		BroadcastPayload: func(issue db.Issue, atts []db.Attachment, labels []db.IssueLabel) map[string]any {
 			payload := issueToResponse(issue, prefix)
 			// The event other tabs receive must carry the category too — filling

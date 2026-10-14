@@ -24,6 +24,9 @@ export interface CreateIssueRequest {
   /** ID-keyed custom-property values validated and persisted atomically with
    * the issue. */
   properties?: IssuePropertyValues;
+  /** Keep the assignee but skip the run the assignment would start ("Don't
+   *  start yet"). Control field; older servers ignore it and start the run. */
+  suppress_run?: boolean;
 }
 
 export interface CreateCommentSubIssueManualRequest {
