@@ -127,7 +127,9 @@ func (s *IssueService) WillEnqueueRun(ctx context.Context, in IssueTriggerInput,
 	switch {
 	case in.IsCreate || in.AssigneeChanged:
 		// Backlog is the parking lot: assigning into backlog never starts a run.
-		if currentStatus == "backlog" {
+		// Closed work stays closed: handing a done/cancelled issue to an agent
+		// records the owner without reopening it, matching the status path below.
+		if currentStatus == "backlog" || currentStatus == "done" || currentStatus == "cancelled" {
 			return IssueRunTrigger{}, false
 		}
 		source = RunSourceAssign

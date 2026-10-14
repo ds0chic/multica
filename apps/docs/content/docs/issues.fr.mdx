@@ -34,7 +34,7 @@ Chaque tâche porte un numéro, par exemple `MUL-123`. Les chiffres s'incrément
 | **Agent** | Une exécution est créée pour cet agent. |
 | **Squad** | Le chef du squad la reçoit et décide qui la traite. |
 
-Lorsqu'elle est assignée à un agent ou à un squad, la tâche est immédiatement mise en file d'attente, sauf si elle est en `backlog` ; si le runtime est hors ligne, l'exécution attend dans la file. Les agents et les squads archivés ne peuvent pas être assignés.
+Lorsqu'elle est assignée à un agent ou à un squad, la tâche est immédiatement mise en file d'attente, sauf si elle est en `backlog`, `done` ou `cancelled` ; si le runtime est hors ligne, l'exécution attend dans la file. Les agents et les squads archivés ne peuvent pas être assignés.
 
 L'assignation ne contourne pas l'**Accès** d'un agent ; lors d'une assignation à un squad, c'est l'Accès du chef qui est vérifié. Voir [Assigner des tâches aux agents](/assigning-issues).
 

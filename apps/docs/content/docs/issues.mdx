@@ -34,7 +34,7 @@ Each issue has a number, such as `MUL-123`. The digits increment within the work
 | **Agent** | A run is created for that agent. |
 | **Squad** | The squad leader receives it and decides who handles it. |
 
-When assigned to an agent or a squad, the issue enqueues immediately unless it is in `backlog`; if the runtime is offline, the run waits in the queue. Archived agents and squads cannot be assigned.
+When assigned to an agent or a squad, the issue enqueues immediately unless it is in `backlog`, `done` or `cancelled`; if the runtime is offline, the run waits in the queue. Archived agents and squads cannot be assigned.
 
 Assignment does not bypass an agent's Access; when assigning to a squad, the leader's Access is what gets checked. See [Assign issues to agents](/assigning-issues).
 

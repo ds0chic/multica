@@ -58,10 +58,10 @@ const NEVER_STARTS: IssueStatusCategory[] = ["done", "closed"];
  * directly. Pure so every entry point — issue detail, context menu, table row —
  * routes on one answer instead of re-deriving it (MUL-6463).
  *
- * - **assign**: giving the issue an agent/squad owner. Skipped only when the
- *   issue is on the fixed backlog key, because assigning into that status
- *   never starts a run (`server/internal/service/issue_trigger.go`) and the
- *   dialog would promise something that cannot happen.
+ * - **assign**: giving the issue an agent/squad owner. Skipped when the issue
+ *   is on the fixed backlog key or in a done/closed category, because
+ *   assigning there never starts a run (`server/internal/service/issue_trigger.go`)
+ *   and the dialog would promise something that cannot happen.
  * - **promote**: moving an already-owned issue out of the fixed backlog status.
  *   That status change alone starts the run (`RunSourceStatus`), so it earns
  *   the same dialog when the target is not terminal, including custom statuses.
@@ -76,11 +76,13 @@ export function runConfirmIntent(
 ): RunConfirmIntent | null {
   const issueCategory = resolveStatusCategory(issue.status, issue.status_category, catalog);
   const parked = issue.status === "backlog";
+  const closed = issueCategory !== null && NEVER_STARTS.includes(issueCategory);
 
   if (
     (updates.assignee_type === "agent" || updates.assignee_type === "squad") &&
     updates.assignee_id &&
-    !parked
+    !parked &&
+    !closed
   ) {
     return {
       issueIds: [issue.id],
