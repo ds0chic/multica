@@ -182,38 +182,6 @@ func TestNormalizeServerVersion(t *testing.T) {
 	}
 }
 
-func TestEnvBool(t *testing.T) {
-	tests := []struct {
-		name  string
-		key   string
-		value string
-		def   bool
-		want  bool
-	}{
-		{"empty_returns_default_false", "TEST_ENV_BOOL_1", "", false, false},
-		{"empty_returns_default_true", "TEST_ENV_BOOL_2", "", true, true},
-		{"true_string", "TEST_ENV_BOOL_3", "true", false, true},
-		{"false_string", "TEST_ENV_BOOL_4", "false", true, false},
-		{"one_is_true", "TEST_ENV_BOOL_5", "1", false, true},
-		{"zero_is_false", "TEST_ENV_BOOL_6", "0", true, false},
-		{"invalid_returns_default", "TEST_ENV_BOOL_7", "maybe", false, false},
-		{"invalid_returns_default_true", "TEST_ENV_BOOL_8", "maybe", true, true},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if tt.value != "" {
-				t.Setenv(tt.key, tt.value)
-			} else {
-				os.Unsetenv(tt.key)
-			}
-			got := envBool(tt.key, tt.def)
-			if got != tt.want {
-				t.Errorf("envBool(%q, %v) = %v, want %v", tt.key, tt.def, got, tt.want)
-			}
-		})
-	}
-}
-
 func TestEnvNonNegativeDuration(t *testing.T) {
 	tests := []struct {
 		name  string

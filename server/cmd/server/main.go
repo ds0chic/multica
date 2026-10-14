@@ -31,6 +31,7 @@ import (
 	"github.com/multica-ai/multica/server/internal/scheduler"
 	"github.com/multica-ai/multica/server/internal/selfhosttelemetry"
 	"github.com/multica-ai/multica/server/internal/service"
+	"github.com/multica-ai/multica/server/internal/util"
 	db "github.com/multica-ai/multica/server/pkg/db/generated"
 	"github.com/multica-ai/multica/server/pkg/featureflag"
 	"github.com/multica-ai/multica/server/pkg/llm"
@@ -44,7 +45,7 @@ var (
 
 func newNamedRedisClient(base *redis.UniversalOptions, suffix string) redis.UniversalClient {
 	opts := *base
-	if envBool("REDIS_DISABLE_CLIENT_NAME", false) {
+	if util.EnvBool("REDIS_DISABLE_CLIENT_NAME", false) {
 		opts.ClientName = ""
 	} else {
 		opts.ClientName = redisClientName(opts.ClientName, suffix)
@@ -102,7 +103,7 @@ func shardedRelayConfigFromEnv() realtime.ShardedStreamRelayConfig {
 	cfg.StreamTTL = envDuration("REALTIME_RELAY_STREAM_TTL", cfg.TrimHorizon+cfg.ReplayGrace)
 	cfg.TTLRefreshInterval = envDuration("REALTIME_RELAY_TTL_REFRESH_INTERVAL", cfg.TTLRefreshInterval)
 	cfg.MaintenanceInterval = envDuration("REALTIME_RELAY_MAINTENANCE_INTERVAL", cfg.MaintenanceInterval)
-	cfg.StreamTTLEnabled = envBool("REALTIME_RELAY_STREAM_TTL_ENABLED", false)
+	cfg.StreamTTLEnabled = util.EnvBool("REALTIME_RELAY_STREAM_TTL_ENABLED", false)
 	if err := cfg.Validate(); err != nil {
 		slog.Warn("invalid realtime relay retention config; normalizing to safe values", "error", err)
 	}
@@ -275,19 +276,6 @@ func holdBeforeShutdown(sig os.Signal, signals <-chan os.Signal, duration time.D
 			"configured_duration", duration.String(),
 		)
 	}
-}
-
-func envBool(name string, def bool) bool {
-	raw := os.Getenv(name)
-	if raw == "" {
-		return def
-	}
-	v, err := strconv.ParseBool(raw)
-	if err != nil {
-		slog.Warn("invalid env var, using default", "name", name, "value", raw, "default", def, "error", err)
-		return def
-	}
-	return v
 }
 
 func backgroundServices(h *handler.Handler) (*service.TaskService, *service.AutopilotService) {
@@ -496,12 +484,12 @@ func main() {
 		closeRedisClient("store", storeRedis)
 	}()
 	sharedRedisURL := strings.TrimSpace(os.Getenv("REDIS_URL"))
-	redisClusterMode := envBool("REDIS_CLUSTER_MODE", false)
+	redisClusterMode := util.EnvBool("REDIS_CLUSTER_MODE", false)
 	// Main parses shared options instead of using database.NewRedisClient so it
 	// can create separate role-specific pools. Request-path clients must also
 	// survive a transient startup outage; relay and lease components own their
 	// existing bounded readiness probes and failure policies.
-	if sharedRedisURL != "" && envBool("REDIS_DISABLE_CLIENT_NAME", false) {
+	if sharedRedisURL != "" && util.EnvBool("REDIS_DISABLE_CLIENT_NAME", false) {
 		slog.Info("redis: CLIENT SETNAME disabled (REDIS_DISABLE_CLIENT_NAME=true) for managed Redis compatibility")
 	}
 	if sharedRedisURL != "" {

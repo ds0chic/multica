@@ -2,7 +2,8 @@ package selfhosttelemetry
 
 import (
 	"log/slog"
-	"strings"
+
+	"github.com/multica-ai/multica/server/internal/util"
 )
 
 // Config is read once during API server startup. Endpoint selection is
@@ -13,12 +14,12 @@ type Config struct {
 }
 
 // ConfigFromDoNotTrack implements the industry-standard opt-out switch used by
-// the self-hosted server. Only 1 and true (case-insensitive), after trimming,
-// disable telemetry; every other value preserves the default-on behavior.
+// the self-hosted server. Any true spelling (1, true, yes, on; see
+// util.ParseBool) disables telemetry; every other value preserves the
+// default-on behavior.
 func ConfigFromDoNotTrack(raw string) Config {
-	raw = strings.TrimSpace(raw)
-	disabled := raw == "1" || strings.EqualFold(raw, "true")
-	return Config{Enabled: !disabled}
+	disabled, ok := util.ParseBool(raw)
+	return Config{Enabled: !(ok && disabled)}
 }
 
 // LogStartupStatus makes the default-on behavior observable without logging

@@ -8,6 +8,7 @@ import (
 
 	"github.com/multica-ai/multica/server/internal/analytics"
 	"github.com/multica-ai/multica/server/internal/featureflags"
+	"github.com/multica-ai/multica/server/internal/util"
 )
 
 type AppConfig struct {
@@ -123,9 +124,9 @@ func (h *Handler) GetConfig(w http.ResponseWriter, r *http.Request) {
 		AgentConversationStartersSupported: true,
 		IssueCreatePropertiesSupported:     true,
 		CommentDeleteKeepRepliesSupported:  true,
-		AllowSignup:                        os.Getenv("ALLOW_SIGNUP") != "false",
+		AllowSignup:                        util.EnvBool("ALLOW_SIGNUP", true),
 		GoogleClientID:                     os.Getenv("GOOGLE_CLIENT_ID"),
-		WorkspaceCreationDisabled:          os.Getenv("DISABLE_WORKSPACE_CREATION") == "true",
+		WorkspaceCreationDisabled:          util.EnvBool("DISABLE_WORKSPACE_CREATION", false),
 	}
 	if h.Storage != nil {
 		config.CdnDomain = h.Storage.CdnDomain()

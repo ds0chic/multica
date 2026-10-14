@@ -541,7 +541,7 @@ func LoadConfig(overrides Overrides) (Config, error) {
 	}
 
 	// Keep env after task: env > default (false)
-	keepEnv := os.Getenv("MULTICA_KEEP_ENV_AFTER_TASK") == "true" || os.Getenv("MULTICA_KEEP_ENV_AFTER_TASK") == "1"
+	keepEnv := boolFromEnv("MULTICA_KEEP_ENV_AFTER_TASK", false)
 
 	// GC config: env > defaults
 	gcEnabled := true

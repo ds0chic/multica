@@ -7,6 +7,8 @@ import { Callout } from "fumadocs-ui/components/callout";
 
 Multica는 프로세스를 시작할 때 환경 변수를 읽습니다. 수정 후에는 보통 해당 API, Web 또는 데몬을 다시 시작해야 합니다. Docker Compose의 `docker compose restart`는 `.env`를 다시 읽지 않으므로 `up -d`로 컨테이너를 다시 만들어야 적용됩니다.
 
+API 서버의 켜기/끄기 변수는 `true`/`false`, `1`/`0`, `yes`/`no`, `on`/`off`를 대소문자 구분 없이 허용합니다. 인식할 수 없는 값은 경고를 로그에 남기고 기본값을 유지합니다.
+
 이 페이지에는 배포자를 위한 설정만 나열하며 테스트 변수와 내부 실행 변수는 다루지 않습니다. 여기서는 그룹별 참조를 제공하고 전체 배포 단계는 [자체 호스팅 빠른 시작](/self-host-quickstart)을 참고하세요.
 
 ## 프로덕션 최소 설정
