@@ -6,6 +6,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5"
@@ -150,6 +151,11 @@ type RerunIssueRequest struct {
 	// assignee — so clicking retry on row that belonged to a now-displaced
 	// agent re-fires that same agent, not the new assignee.
 	TaskID string `json:"task_id,omitempty"`
+	// Model and ThinkingLevel pick the model / effort for the new run only
+	// ("retry with"); the agent's saved settings are left alone. Empty keeps
+	// the agent's values, or the source task's own pick when task_id is set.
+	Model         string `json:"model,omitempty"`
+	ThinkingLevel string `json:"thinking_level,omitempty"`
 }
 
 // RerunIssue manually re-enqueues an agent run for the issue. By default it
@@ -208,7 +214,18 @@ func (h *Handler) RerunIssue(w http.ResponseWriter, r *http.Request) {
 		return h.canInvokeAgent(r.Context(), agent, actorType, actorID, originatorUserID, workspaceID)
 	}
 
-	task, err := h.TaskService.RerunIssue(r.Context(), issue.ID, sourceTaskID, pgtype.UUID{}, actorUserID, canInvoke)
+	var overrides service.ChatRunOverrides
+	if strings.TrimSpace(req.Model) != "" || strings.TrimSpace(req.ThinkingLevel) != "" {
+		target, ok := h.rerunTargetAgent(w, r, issue, sourceTaskID)
+		if !ok {
+			return
+		}
+		if overrides, ok = h.resolveChatRunOverrides(w, r, target, req.Model, req.ThinkingLevel); !ok {
+			return
+		}
+	}
+
+	task, err := h.TaskService.RerunIssueWithOverrides(r.Context(), issue.ID, sourceTaskID, pgtype.UUID{}, actorUserID, canInvoke, overrides)
 	if errors.Is(err, service.ErrRerunInvokeNotAllowed) {
 		h.writeDispatchBlocked(w, http.StatusForbidden, ReasonInvocationNotAllowed)
 		return
@@ -228,6 +245,41 @@ func (h *Handler) RerunIssue(w http.ResponseWriter, r *http.Request) {
 	resp := taskToResponse(*task, uuidToString(issue.WorkspaceID))
 	h.hydrateTaskAttributions(r.Context(), []*TaskAttribution{resp.Attribution})
 	writeJSON(w, http.StatusAccepted, resp)
+}
+
+// rerunTargetAgent resolves the agent a rerun will start, the same way
+// TaskService.RerunIssue does, so a model / effort pick is validated against
+// that agent's runtime before anything is enqueued. On failure it has already
+// written a 4xx and returns ok=false.
+func (h *Handler) rerunTargetAgent(w http.ResponseWriter, r *http.Request, issue db.Issue, sourceTaskID pgtype.UUID) (db.Agent, bool) {
+	var agentID pgtype.UUID
+	switch {
+	case sourceTaskID.Valid:
+		source, err := h.Queries.GetAgentTask(r.Context(), sourceTaskID)
+		if err != nil || uuidToString(source.IssueID) != uuidToString(issue.ID) {
+			writeError(w, http.StatusBadRequest, "source task does not belong to this issue")
+			return db.Agent{}, false
+		}
+		agentID = source.AgentID
+	case issue.AssigneeType.String == "agent" && issue.AssigneeID.Valid:
+		agentID = issue.AssigneeID
+	case issue.AssigneeType.String == "squad" && issue.AssigneeID.Valid:
+		squad, err := h.Queries.GetSquad(r.Context(), issue.AssigneeID)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, "issue is assigned to a squad but squad not found")
+			return db.Agent{}, false
+		}
+		agentID = squad.LeaderID
+	default:
+		writeError(w, http.StatusBadRequest, "issue is not assigned to an agent or squad")
+		return db.Agent{}, false
+	}
+	target, err := h.Queries.GetAgent(r.Context(), agentID)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "target agent not found")
+		return db.Agent{}, false
+	}
+	return target, true
 }
 
 // RetrySourceContextQuickCreate manually re-enqueues a failed issue-less

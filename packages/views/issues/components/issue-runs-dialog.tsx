@@ -856,7 +856,7 @@ function RunListRow({
           </span>
         )}
       </span>
-      <span className="flex w-14 shrink-0 items-center justify-end gap-0.5 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover/run-row:opacity-100 [@media(hover:hover)]:focus-within:opacity-100">
+      <span className="flex w-20 shrink-0 items-center justify-end gap-0.5 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover/run-row:opacity-100 [@media(hover:hover)]:focus-within:opacity-100 [@media(hover:hover)]:has-[[data-popup-open]]:opacity-100">
         <TranscriptButton
           task={task}
           agentName={agentName}
