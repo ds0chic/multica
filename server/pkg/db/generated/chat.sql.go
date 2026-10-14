@@ -2547,6 +2547,41 @@ func (q *Queries) ListPendingChatTasksForSession(ctx context.Context, chatSessio
 	return items, nil
 }
 
+const listTaskRunOverrides = `-- name: ListTaskRunOverrides :many
+SELECT id, model_override, thinking_level_override
+FROM agent_task_queue
+WHERE id = ANY($1::uuid[])
+  AND (model_override IS NOT NULL OR thinking_level_override IS NOT NULL)
+`
+
+type ListTaskRunOverridesRow struct {
+	ID                    pgtype.UUID `json:"id"`
+	ModelOverride         pgtype.Text `json:"model_override"`
+	ThinkingLevelOverride pgtype.Text `json:"thinking_level_override"`
+}
+
+// Per-message model / thinking-level picks for the given tasks, for showing
+// what a chat turn ran with. Tasks with no pick are omitted.
+func (q *Queries) ListTaskRunOverrides(ctx context.Context, taskIds []pgtype.UUID) ([]ListTaskRunOverridesRow, error) {
+	rows, err := q.db.Query(ctx, listTaskRunOverrides, taskIds)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListTaskRunOverridesRow{}
+	for rows.Next() {
+		var i ListTaskRunOverridesRow
+		if err := rows.Scan(&i.ID, &i.ModelOverride, &i.ThinkingLevelOverride); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listUnownedChannelChatContextRevisions = `-- name: ListUnownedChannelChatContextRevisions :many
 WITH pending AS (
     SELECT DISTINCT COALESCE(channel_context_revision, 1)::bigint AS context_revision

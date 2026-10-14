@@ -1225,6 +1225,7 @@ func (h *Handler) ListChatMessages(w http.ResponseWriter, r *http.Request) {
 	for i, m := range messages {
 		resp[i] = chatMessageToResponse(m, groupedAtt[uuidToString(m.ID)])
 	}
+	h.attachChatRunOverrides(r.Context(), messages, resp)
 	writeJSON(w, http.StatusOK, resp)
 }
 
@@ -1290,6 +1291,7 @@ func (h *Handler) ListChatMessagesPage(w http.ResponseWriter, r *http.Request) {
 	for i, m := range messages {
 		resp[i] = chatMessageToResponse(m, groupedAtt[uuidToString(m.ID)])
 	}
+	h.attachChatRunOverrides(r.Context(), messages, resp)
 	writeJSON(w, http.StatusOK, ChatMessagesPageResponse{
 		Messages:   resp,
 		Limit:      limit,
@@ -2045,6 +2047,10 @@ type ChatMessageResponse struct {
 	// agent can `multica attachment download <id>` rather than guessing
 	// from a markdown URL that may expire.
 	Attachments []AttachmentResponse `json:"attachments,omitempty"`
+	// ModelOverride / ThinkingLevelOverride are the per-message picks the
+	// turn's task ran with. Omitted when the turn used the agent's settings.
+	ModelOverride         string `json:"model_override,omitempty"`
+	ThinkingLevelOverride string `json:"thinking_level_override,omitempty"`
 }
 
 func chatSessionToResponse(s db.ChatSession) ChatSessionResponse {

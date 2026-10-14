@@ -1727,3 +1727,11 @@ WHERE workspace_id = $1
   AND status = 'active'
 ORDER BY created_at ASC
 LIMIT 1;
+
+-- name: ListTaskRunOverrides :many
+-- Per-message model / thinking-level picks for the given tasks, for showing
+-- what a chat turn ran with. Tasks with no pick are omitted.
+SELECT id, model_override, thinking_level_override
+FROM agent_task_queue
+WHERE id = ANY(sqlc.arg('task_ids')::uuid[])
+  AND (model_override IS NOT NULL OR thinking_level_override IS NOT NULL);

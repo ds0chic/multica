@@ -315,6 +315,32 @@ describe("ChatMessageList live timeline (MUL-3960 regression)", () => {
     expect(screen.queryByRole("button", { name: "Copy" })).not.toBeInTheDocument();
   });
 
+  it("shows the model and effort a reply ran with under it", async () => {
+    render(
+      <I18nProvider locale="en" resources={TEST_RESOURCES}>
+        <QueryClientProvider client={new QueryClient()}>
+          <ChatMessageList
+            messages={[{
+              id: "picked-reply",
+              chat_session_id: "session-1",
+              role: "assistant",
+              content: "Done.",
+              task_id: TASK_ID,
+              created_at: "2026-09-17T00:00:00Z",
+              elapsed_ms: 2000,
+              model_override: "moonshot/kimi-k3",
+              thinking_level_override: "high",
+            }]}
+            pendingTask={null}
+            availability="online"
+          />
+        </QueryClientProvider>
+      </I18nProvider>,
+    );
+
+    expect(await screen.findByText("moonshot/kimi-k3 · high")).toBeInTheDocument();
+  });
+
   it("renders the canonical settled answer while retaining process narration", async () => {
     const qc = new QueryClient();
     qc.setQueryData(chatKeys.taskMessages(TASK_ID), [

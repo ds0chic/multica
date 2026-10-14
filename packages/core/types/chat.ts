@@ -172,6 +172,12 @@ export interface ChatMessage {
   message_kind?: ChatMessageKind;
   /** Up to three server-validated follow-ups generated with this reply. */
   quick_actions?: ChatQuickAction[];
+  /**
+   * Per-message model / thinking-level pick this turn ran with. Absent when
+   * the turn used the agent's own settings, and on older servers.
+   */
+  model_override?: string;
+  thinking_level_override?: string;
 }
 
 export interface ChatMessagesCursor {

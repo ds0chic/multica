@@ -449,6 +449,9 @@ export interface ChatDonePayload {
    * quick_actions; absent on older servers/daemons.
    */
   quick_actions_pending?: boolean;
+  /** Per-message model / thinking-level pick the turn ran with, if any. */
+  model_override?: string;
+  thinking_level_override?: string;
 }
 
 /**

@@ -1,8 +1,12 @@
 package handler
 
 import (
+	"context"
+	"log/slog"
 	"net/http"
 	"strings"
+
+	"github.com/jackc/pgx/v5/pgtype"
 
 	"github.com/multica-ai/multica/server/internal/service"
 	"github.com/multica-ai/multica/server/pkg/agent"
@@ -57,4 +61,40 @@ func (h *Handler) resolveChatRunOverrides(w http.ResponseWriter, r *http.Request
 		}
 	}
 	return service.ChatRunOverrides{Model: model, ThinkingLevel: thinkingLevel}, true
+}
+
+// attachChatRunOverrides fills each message's model / thinking-level pick from
+// its task, so the transcript shows what a turn ran with. resp is index-aligned
+// with messages. Best-effort: a failed lookup leaves the fields empty.
+func (h *Handler) attachChatRunOverrides(ctx context.Context, messages []db.ChatMessage, resp []ChatMessageResponse) {
+	taskIDs := make([]pgtype.UUID, 0, len(messages))
+	seen := make(map[string]bool, len(messages))
+	for _, m := range messages {
+		if !m.TaskID.Valid || seen[uuidToString(m.TaskID)] {
+			continue
+		}
+		seen[uuidToString(m.TaskID)] = true
+		taskIDs = append(taskIDs, m.TaskID)
+	}
+	if len(taskIDs) == 0 {
+		return
+	}
+	rows, err := h.Queries.ListTaskRunOverrides(ctx, taskIDs)
+	if err != nil {
+		slog.Warn("list chat run overrides failed", "error", err)
+		return
+	}
+	if len(rows) == 0 {
+		return
+	}
+	byTask := make(map[string]db.ListTaskRunOverridesRow, len(rows))
+	for _, row := range rows {
+		byTask[uuidToString(row.ID)] = row
+	}
+	for i, m := range messages {
+		if row, ok := byTask[uuidToString(m.TaskID)]; ok && m.TaskID.Valid {
+			resp[i].ModelOverride = row.ModelOverride.String
+			resp[i].ThinkingLevelOverride = row.ThinkingLevelOverride.String
+		}
+	}
 }

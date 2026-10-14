@@ -7430,9 +7430,11 @@ func (s *TaskService) broadcastChatDone(ctx context.Context, task db.AgentTaskQu
 		return
 	}
 	payload := protocol.ChatDonePayload{
-		ChatSessionID:       util.UUIDToString(task.ChatSessionID),
-		TaskID:              util.UUIDToString(task.ID),
-		QuickActionsPending: quickActionsPending,
+		ChatSessionID:         util.UUIDToString(task.ChatSessionID),
+		TaskID:                util.UUIDToString(task.ID),
+		QuickActionsPending:   quickActionsPending,
+		ModelOverride:         task.ModelOverride.String,
+		ThinkingLevelOverride: task.ThinkingLevelOverride.String,
 	}
 	if msg != nil {
 		payload.MessageID = util.UUIDToString(msg.ID)

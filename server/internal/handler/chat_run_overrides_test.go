@@ -124,6 +124,24 @@ func TestSendChatMessage_RunOverridesReachClaim(t *testing.T) {
 		t.Fatalf("claimed agent model/thinking = (%q, %q), want overrides", claimed.Task.Agent.Model, claimed.Task.Agent.ThinkingLevel)
 	}
 
+	// The transcript reports what the turn ran with.
+	listReq := httptest.NewRequest(http.MethodGet, "/api/chat/sessions/"+sessionID+"/messages", nil)
+	listReq.Header.Set("X-User-ID", testUserID)
+	listReq = withURLParam(listReq, "sessionId", sessionID)
+	listReq = withChatTestWorkspaceCtx(t, listReq)
+	listW := httptest.NewRecorder()
+	testHandler.ListChatMessages(listW, listReq)
+	if listW.Code != http.StatusOK {
+		t.Fatalf("ListChatMessages: expected 200, got %d: %s", listW.Code, listW.Body.String())
+	}
+	var listed []ChatMessageResponse
+	if err := json.Unmarshal(listW.Body.Bytes(), &listed); err != nil {
+		t.Fatalf("decode messages: %v", err)
+	}
+	if len(listed) != 1 || listed[0].ModelOverride != "claude-opus-override" || listed[0].ThinkingLevelOverride != "high" {
+		t.Fatalf("listed messages = %+v, want one message carrying the overrides", listed)
+	}
+
 	// The agent's own defaults are untouched by a per-message pick.
 	var agentModel, agentThinking string
 	if err := testPool.QueryRow(context.Background(),

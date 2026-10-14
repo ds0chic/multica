@@ -304,6 +304,10 @@ type ChatDonePayload struct {
 	// follow for this turn (render a placeholder). Never true when
 	// QuickActions is already populated.
 	QuickActionsPending bool `json:"quick_actions_pending,omitempty"`
+	// ModelOverride / ThinkingLevelOverride echo the per-message picks the
+	// turn ran with, matching the message list. Omitted without a pick.
+	ModelOverride         string `json:"model_override,omitempty"`
+	ThinkingLevelOverride string `json:"thinking_level_override,omitempty"`
 }
 
 // Outcome values carried by ChatCancelFinalizedPayload.
