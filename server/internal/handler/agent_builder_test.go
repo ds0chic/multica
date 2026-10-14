@@ -837,6 +837,7 @@ func TestSendDirectChatMessageUsesCurrentlyBoundRuntime(t *testing.T) {
 
 	sent, err := testHandler.TaskService.SendDirectChatMessage(
 		ctx, session, staleAgent, parseUUID(testUserID), "hello after the switch", nil, "member", parseUUID(testUserID),
+		service.ChatRunOverrides{},
 	)
 	if err != nil {
 		t.Fatalf("SendDirectChatMessage: %v", err)
@@ -964,6 +965,7 @@ func TestSendDirectChatMessageWaitsForUncommittedRebind(t *testing.T) {
 		sent, err := testHandler.TaskService.SendDirectChatMessage(
 			context.Background(), session, staleAgent, parseUUID(testUserID),
 			"sent while the rebind was still open", nil, "member", parseUUID(testUserID),
+			service.ChatRunOverrides{},
 		)
 		if err != nil {
 			results <- sendResult{err: err}
@@ -1037,6 +1039,7 @@ func TestSendDirectChatMessageRejectsSessionArchivedWhileWaitingForLock(t *testi
 		_, err := testHandler.TaskService.SendDirectChatMessage(
 			context.Background(), session, agent, parseUUID(testUserID),
 			"must not enqueue after archive", nil, "member", parseUUID(testUserID),
+			service.ChatRunOverrides{},
 		)
 		results <- err
 	}()

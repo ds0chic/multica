@@ -818,6 +818,10 @@ func (h *Handler) DeleteChatSession(w http.ResponseWriter, r *http.Request) {
 type SendChatMessageRequest struct {
 	Content       string   `json:"content"`
 	AttachmentIDs []string `json:"attachment_ids"`
+	// Model and ThinkingLevel optionally override the agent's saved model /
+	// thinking level for this message's run only. Empty means "use the agent's".
+	Model         string `json:"model"`
+	ThinkingLevel string `json:"thinking_level"`
 }
 
 type SendChatMessageResponse struct {
@@ -925,6 +929,11 @@ func (h *Handler) SendChatMessage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	runOverrides, ok := h.resolveChatRunOverrides(w, r, agent, req.Model, req.ThinkingLevel)
+	if !ok {
+		return
+	}
+
 	// Detect whether this is the very first human message in the session,
 	// BEFORE we insert the new row. This scopes LLM auto-titling (MUL-4295) to
 	// the opening turn: we upgrade the default/original title exactly once, off
@@ -956,7 +965,7 @@ func (h *Handler) SendChatMessage(w http.ResponseWriter, r *http.Request) {
 	// creator-only), so they are the task initiator and the run's originator —
 	// surfaced to the agent under `## On Behalf Of`. actorType/actorID were
 	// resolved above for the invoke gate.
-	sent, err := h.TaskService.SendDirectChatMessage(r.Context(), session, agent, parseUUID(userID), req.Content, attachmentIDs, actorType, parseUUID(actorID))
+	sent, err := h.TaskService.SendDirectChatMessage(r.Context(), session, agent, parseUUID(userID), req.Content, attachmentIDs, actorType, parseUUID(actorID), runOverrides)
 	if err != nil {
 		switch {
 		case errors.Is(err, service.ErrChatSessionArchived):
