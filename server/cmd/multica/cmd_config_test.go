@@ -431,3 +431,31 @@ func TestPollIntervalRoundTripThroughDuration(t *testing.T) {
 		t.Fatalf("parsed = %v, want %v", got, want)
 	}
 }
+
+// Daemon-read settings only apply once the daemon restarts; `config set` says
+// so. app_url and workspace_id are read by the CLI itself on every run.
+func TestRunConfigSetHintsDaemonRestart(t *testing.T) {
+	redirectTestHome(t, t.TempDir())
+
+	set := func(profile string, args ...string) string {
+		t.Helper()
+		cmd := newConfigTestCmd()
+		_ = cmd.Flags().Set("profile", profile)
+		stderr := captureStderr(t)
+		defer stderr.restore()
+		if err := runConfigSet(cmd, args); err != nil {
+			t.Fatalf("runConfigSet %v: %v", args, err)
+		}
+		return stderr.read()
+	}
+
+	if got := set("", "max_concurrent_tasks", "4"); !strings.Contains(got, "'multica daemon restart'") {
+		t.Fatalf("output = %q, want a daemon restart hint", got)
+	}
+	if got := set("dev", "poll_interval", "5s"); !strings.Contains(got, "multica daemon restart --profile dev") {
+		t.Fatalf("output = %q, want the hint to carry the profile", got)
+	}
+	if got := set("", "app_url", "http://127.0.0.1:3000"); strings.Contains(got, "restart") {
+		t.Fatalf("output = %q, want no restart hint for a CLI-only key", got)
+	}
+}
