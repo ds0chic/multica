@@ -7,6 +7,8 @@ import { Callout } from "fumadocs-ui/components/callout";
 
 Multica reads environment variables at process startup. After changing one, restart the affected API, web, or daemon process. Docker Compose's `docker compose restart` does not re-read `.env`; recreate containers with `up -d` for changes to take effect.
 
+On the API server, on/off switches accept `true`/`false`, `1`/`0`, `yes`/`no`, or `on`/`off` in any letter case. An unrecognized value logs a warning and keeps the default.
+
 This page lists deployment-facing configuration only; test variables and internal run variables are not covered here. It is a grouped reference — for full deployment steps, see the [self-host quickstart](/self-host-quickstart).
 
 ## Minimum production configuration

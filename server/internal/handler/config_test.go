@@ -114,6 +114,30 @@ func TestGetConfigIncludesRuntimeAuthConfig(t *testing.T) {
 	}
 }
 
+// ALLOW_SIGNUP=0 must close signup and DISABLE_WORKSPACE_CREATION=1 must
+// disable workspace creation; both used to accept only the literal words.
+func TestGetConfigAcceptsCommonBooleanSpellings(t *testing.T) {
+	t.Setenv("ALLOW_SIGNUP", "0")
+	t.Setenv("DISABLE_WORKSPACE_CREATION", "1")
+
+	req := httptest.NewRequest(http.MethodGet, "/api/config", nil)
+	w := httptest.NewRecorder()
+	testHandler.GetConfig(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("GetConfig: expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+	var cfg AppConfig
+	if err := json.Unmarshal(w.Body.Bytes(), &cfg); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if cfg.AllowSignup {
+		t.Fatal("ALLOW_SIGNUP=0 should report signup disabled")
+	}
+	if !cfg.WorkspaceCreationDisabled {
+		t.Fatal("DISABLE_WORKSPACE_CREATION=1 should report workspace creation disabled")
+	}
+}
+
 func TestGetConfigUsesDaemonServerURLOverride(t *testing.T) {
 	t.Setenv("MULTICA_DAEMON_SERVER_URL", " https://api.internal.example/// ")
 	t.Setenv("MULTICA_PUBLIC_URL", "https://hooks.example.com/")

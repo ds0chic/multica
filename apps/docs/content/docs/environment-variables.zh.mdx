@@ -7,6 +7,8 @@ import { Callout } from "fumadocs-ui/components/callout";
 
 Multica 在进程启动时读取环境变量。修改后通常需要重启对应的 API、Web 或守护进程。Docker Compose 的 `docker compose restart` 不会重新读取 `.env`，要用 `up -d` 重建容器才能生效。
 
+API 服务端的开关类变量接受 `true`/`false`、`1`/`0`、`yes`/`no` 或 `on`/`off`，不区分大小写。无法识别的值会在日志中给出警告，并沿用默认值。
+
 本页只列面向部署者的配置；测试变量和内部运行变量不在这里展开。本页是分组参考；完整部署步骤见[自托管快速上手](/self-host-quickstart)。
 
 ## 生产环境最小配置

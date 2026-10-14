@@ -17,6 +17,8 @@ import (
 	"os"
 	"strings"
 	"time"
+
+	"github.com/multica-ai/multica/server/internal/util"
 )
 
 // Event is a single analytics capture. Fields mirror PostHog's /capture/ shape
@@ -93,8 +95,7 @@ func NewFromEnv() Client {
 }
 
 func isDisabled() bool {
-	v := os.Getenv("ANALYTICS_DISABLED")
-	return v == "true" || v == "1"
+	return util.EnvBool("ANALYTICS_DISABLED", false)
 }
 
 func EnvironmentFromEnv() string {

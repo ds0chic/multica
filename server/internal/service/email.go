@@ -16,6 +16,8 @@ import (
 	"unicode/utf8"
 
 	"github.com/resend/resend-go/v2"
+
+	"github.com/multica-ai/multica/server/internal/util"
 )
 
 // maxSubjectFieldRunes bounds how much user-controlled text (workspace name,
@@ -183,7 +185,7 @@ func NewEmailService() *EmailService {
 	}
 	smtpUsername := os.Getenv("SMTP_USERNAME")
 	smtpPassword := os.Getenv("SMTP_PASSWORD")
-	smtpTLSInsecure := os.Getenv("SMTP_TLS_INSECURE") == "true"
+	smtpTLSInsecure := util.EnvBool("SMTP_TLS_INSECURE", false)
 	from := resolveFromEmail(smtpHost)
 
 	// EHLO/HELO name, only relevant on the SMTP relay send path. net/smtp defaults
