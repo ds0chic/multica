@@ -1580,6 +1580,25 @@ func printDaemonStatusReport(w io.Writer, label string, health map[string]any) {
 		}
 		rows = append(rows, row{"Agents", strings.Join(parts, ", ")})
 	}
+	// Providers found on this machine but dropped at registration (CLI too old,
+	// version undetectable). Without this a rejected CLI looks identical to one
+	// that is not installed. Sorted so the output is stable.
+	if skipped, ok := health["skipped_agents"].(map[string]any); ok && len(skipped) > 0 {
+		names := make([]string, 0, len(skipped))
+		for name := range skipped {
+			names = append(names, name)
+		}
+		sort.Strings(names)
+		parts := make([]string, len(names))
+		for i, name := range names {
+			parts[i] = fmt.Sprintf("%s (%v)", name, skipped[name])
+		}
+		rows = append(rows, row{"Skipped", strings.Join(parts, "; ")})
+	}
+	if active, ok := health["active_task_count"].(float64); ok {
+		running, _ := health["running_task_count"].(float64)
+		rows = append(rows, row{"Tasks", fmt.Sprintf("%d running, %d active", int64(running), int64(active))})
+	}
 	if ws, ok := health["workspaces"].([]any); ok {
 		rows = append(rows, row{"Workspaces", strconv.Itoa(len(ws))})
 	}

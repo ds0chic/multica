@@ -1029,3 +1029,44 @@ func clearDaemonTaskEnv(t *testing.T) {
 		t.Setenv(key, "")
 	}
 }
+
+// A CLI that is installed but rejected (too old, version undetectable) is
+// invisible in the Agents row, so the report names it and the reason; and the
+// running task count shows what the daemon is busy with.
+func TestPrintDaemonStatusReportExplainsSkippedAgentsAndTasks(t *testing.T) {
+	t.Parallel()
+
+	health := map[string]any{
+		"status":             "running",
+		"pid":                float64(1234),
+		"uptime":             "1h",
+		"agents":             []any{"claude"},
+		"active_task_count":  float64(3),
+		"running_task_count": float64(2),
+		"skipped_agents": map[string]any{
+			"codex": "version 0.1.0 is below the minimum 0.9.0",
+			"amp":   "version could not be detected",
+		},
+	}
+	var out bytes.Buffer
+	printDaemonStatusReport(&out, "Daemon", health)
+	got := out.String()
+	for _, want := range []string{
+		"Skipped:",
+		"amp (version could not be detected)",
+		"codex (version 0.1.0 is below the minimum 0.9.0)",
+		"Tasks:",
+		"2 running",
+		"3 active",
+	} {
+		if !strings.Contains(got, want) {
+			t.Errorf("status output = %q, want it to contain %q", got, want)
+		}
+	}
+
+	var none bytes.Buffer
+	printDaemonStatusReport(&none, "Daemon", map[string]any{"status": "running", "pid": float64(1), "uptime": "1s"})
+	if strings.Contains(none.String(), "Skipped:") || strings.Contains(none.String(), "Tasks:") {
+		t.Errorf("status output = %q, want no Skipped or Tasks rows when the daemon reports neither", none.String())
+	}
+}
