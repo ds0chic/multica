@@ -700,6 +700,8 @@ func init() {
 
 	// issue rerun
 	issueRerunCmd.Flags().String("output", "json", "Output format: table or json")
+	issueRerunCmd.Flags().String("model", "", "Model for this run only (the agent's saved model is unchanged)")
+	issueRerunCmd.Flags().String("thinking-level", "", "Thinking level for this run only (the agent's saved level is unchanged)")
 	// issue cancel-task
 	issueCancelTaskCmd.Flags().String("output", "json", "Output format: table or json")
 	issueCancelTaskCmd.Flags().String("issue", "", "Issue ID/key to scope short run ID prefix resolution")
@@ -2952,8 +2954,16 @@ func runIssueRerun(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("resolve issue: %w", err)
 	}
 
+	body := map[string]any{}
+	if model, _ := cmd.Flags().GetString("model"); strings.TrimSpace(model) != "" {
+		body["model"] = strings.TrimSpace(model)
+	}
+	if level, _ := cmd.Flags().GetString("thinking-level"); strings.TrimSpace(level) != "" {
+		body["thinking_level"] = strings.TrimSpace(level)
+	}
+
 	var task map[string]any
-	if err := client.PostJSON(ctx, "/api/issues/"+issueRef.ID+"/rerun", map[string]any{}, &task); err != nil {
+	if err := client.PostJSON(ctx, "/api/issues/"+issueRef.ID+"/rerun", body, &task); err != nil {
 		return fmt.Errorf("rerun issue: %w", err)
 	}
 

@@ -2829,10 +2829,19 @@ export class ApiClient {
     return task;
   }
 
-  async rerunIssue(issueId: string, taskId?: string): Promise<AgentTask> {
+  async rerunIssue(
+    issueId: string,
+    taskId?: string,
+    runOptions?: ChatRunOptions,
+  ): Promise<AgentTask> {
+    const body: { task_id?: string; model?: string; thinking_level?: string } = {};
+    if (taskId) body.task_id = taskId;
+    // Per-run overrides; omitted fields run with the agent's own settings.
+    if (runOptions?.model) body.model = runOptions.model;
+    if (runOptions?.thinkingLevel) body.thinking_level = runOptions.thinkingLevel;
     return this.fetch(`/api/issues/${issueId}/rerun`, {
       method: "POST",
-      body: JSON.stringify(taskId ? { task_id: taskId } : {}),
+      body: JSON.stringify(body),
     });
   }
 

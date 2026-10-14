@@ -848,7 +848,7 @@ function RowStatus({
   return (
     <div
       title={title}
-      className="flex h-7 shrink-0 items-center justify-end gap-1 overflow-hidden whitespace-nowrap text-caption [@media(hover:hover)]:group-hover/execution-log-row:hidden"
+      className="flex h-7 shrink-0 items-center justify-end gap-1 overflow-hidden whitespace-nowrap text-caption [@media(hover:hover)]:group-hover/execution-log-row:hidden [@media(hover:hover)]:group-has-[[data-popup-open]]/execution-log-row:hidden"
     >
       {children}
     </div>
@@ -856,10 +856,11 @@ function RowStatus({
 }
 
 // Action slot — visible by default for touch devices. On hover-capable
-// surfaces, it replaces the status column in place on row hover.
+// surfaces, it replaces the status column in place on row hover, and stays
+// while one of its popovers ("Retry with") is open.
 function RowActions({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex h-7 items-center gap-0.5 [@media(hover:hover)]:hidden [@media(hover:hover)]:group-hover/execution-log-row:flex">
+    <div className="flex h-7 items-center gap-0.5 [@media(hover:hover)]:hidden [@media(hover:hover)]:group-hover/execution-log-row:flex [@media(hover:hover)]:group-has-[[data-popup-open]]/execution-log-row:flex">
       {children}
     </div>
   );
