@@ -5041,6 +5041,13 @@ func (s *TaskService) FailTaskWithTransition(ctx context.Context, taskID pgtype.
 				createRetry = false
 			}
 		}
+		if createRetry && retryTargetsClosedIssue(ctx, qtx, t) {
+			slog.Info("fail task auto-retry skipped: issue was closed",
+				"task_id", util.UUIDToString(taskID),
+				"issue_id", util.UUIDToString(t.IssueID),
+			)
+			createRetry = false
+		}
 		if createRetry {
 			child, cerr := qtx.CreateRetryTask(ctx, db.CreateRetryTaskParams{
 				NewTaskID:            dbid.NewV7(),
@@ -5529,6 +5536,12 @@ func (s *TaskService) MaybeRetryFailedTask(ctx context.Context, parent db.AgentT
 			return nil, nil
 		}
 		return nil, err
+	}
+	if retryTargetsClosedIssue(ctx, qtx, parent) {
+		slog.Info("task auto-retry skipped: issue was closed",
+			"parent_task_id", util.UUIDToString(parent.ID),
+			"issue_id", util.UUIDToString(parent.IssueID))
+		return nil, nil
 	}
 	child, err := qtx.CreateRetryTask(ctx, db.CreateRetryTaskParams{
 		NewTaskID:            dbid.NewV7(),
