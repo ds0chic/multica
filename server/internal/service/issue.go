@@ -841,7 +841,14 @@ func (s *IssueService) maybeEnqueueOnAssign(ctx context.Context, issue db.Issue,
 	//
 	// Triage refuses for a different reason and so returns just as quietly: the
 	// entry is not yet work anyone agreed to do (MUL-7189 §2.3).
-	if issue.TriageState.Valid || issuestatus.Effective(ctx, s.Queries, issue.WorkspaceID, issue.Status) == "backlog" {
+	//
+	// Done/cancelled is closed work: creating it with an agent assignee records
+	// the owner and starts nothing, the same as WillEnqueueRun.
+	if issue.TriageState.Valid {
+		return pgtype.UUID{}
+	}
+	switch issuestatus.Effective(ctx, s.Queries, issue.WorkspaceID, issue.Status) {
+	case "backlog", "done", "cancelled":
 		return pgtype.UUID{}
 	}
 	verdict, admitted := agentAssigneeVerdict(ctx, s.runtimeLookup(s.Queries), issue)

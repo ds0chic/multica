@@ -34,7 +34,7 @@ import { Callout } from "fumadocs-ui/components/callout";
 | **智能体** | 为该智能体创建一次运行。 |
 | **小队** | 由小队 leader 接收，再决定交给谁处理。 |
 
-分配给智能体或小队时，任务不在 `backlog` 就会立即入队；运行时离线时，运行留在队列中等待。已归档的智能体和小队不能被分配。
+分配给智能体或小队时，任务不在 `backlog`、`done` 或 `cancelled` 就会立即入队；运行时离线时，运行留在队列中等待。已归档的智能体和小队不能被分配。
 
 分配不会绕过智能体的访问范围（Access）；分配给小队时，校验的是 leader 的 Access。详见[分配任务给智能体](/assigning-issues)。
 

@@ -48,7 +48,7 @@ Lorsque l'assigné est un [squad](/squads), la même règle s'applique : Multica
 
 Lorsque la tâche a déjà un agent ou un squad comme responsable, la sortir de `backlog` ouvre la même boîte de dialogue : c'est ce changement de statut qui lance l'exécution, elle propose donc le même bouton **Ne pas démarrer maintenant**, qui déplace la tâche sans réveiller l'agent. La boîte de dialogue apparaît pour toute cible autre que `backlog` lui-même et que les statuts des catégories `done` ou `closed`.
 
-Seul le statut fixe `backlog` fonctionne ainsi. Un [statut personnalisé](/issues#statuts-personnalisés) de la catégorie `unstarted` ne met **pas** le travail en attente — assigner un agent à une tâche dans ce statut lance immédiatement une exécution. Les tâches déjà en `done` ou `cancelled` lancent quand même une exécution immédiatement lorsqu'elles sont assignées ou réassignées à un agent.
+Seul le statut fixe `backlog` fonctionne ainsi. Un [statut personnalisé](/issues#statuts-personnalisés) de la catégorie `unstarted` ne met **pas** le travail en attente — assigner un agent à une tâche dans ce statut lance immédiatement une exécution. Les tâches en `done` ou `cancelled` (ou dans un statut personnalisé de catégorie `done` ou `closed`) ne lancent pas non plus d'exécution lorsqu'elles sont assignées ou réassignées à un agent : l'agent en devient responsable et la tâche reste fermée. Pour qu'il la reprenne, laissez-lui un commentaire ou relancez-la.
 
 ## Droits d'assignation
 

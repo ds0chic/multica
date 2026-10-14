@@ -29,6 +29,8 @@ const CATALOG = buildIssueStatusCatalog([
   entry("later", "backlog"),
   entry("rework", "unstarted"),
   entry("qa", "started"),
+  entry("shipped", "done"),
+  entry("shelved", "closed"),
 ]);
 // A catalog that has not loaded: every custom key is unresolvable.
 const COLD = buildIssueStatusCatalog(undefined);
@@ -74,7 +76,11 @@ describe("runConfirmIntent — assign", () => {
 
   it.each([
     ["built-in backlog", "backlog", undefined],
-  ])("applies directly for a parked issue (%s) — assigning there never starts a run", (_label, status, carried) => {
+    ["built-in done", "done", undefined],
+    ["built-in cancelled", "cancelled", undefined],
+    ["custom done category", "shipped", undefined],
+    ["custom closed category", "shelved", undefined],
+  ])("applies directly for a parked or closed issue (%s) — assigning there never starts a run", (_label, status, carried) => {
     expect(
       runConfirmIntent(
         issue({ status, status_category: carried }),
