@@ -349,8 +349,48 @@ func resolveAutopilotTriggerID(ctx context.Context, client *cli.APIClient, autop
 	return resolveIDByPrefix(ctx, client, "autopilot trigger", input, fetch)
 }
 
+// resolveProjectID accepts a full UUID, a UUID prefix, or the project's title.
+// A title wins over a hex-looking prefix ("beef"), since a user who typed a
+// name meant the name; an unmatched title falls through to the prefix path.
 func resolveProjectID(ctx context.Context, client *cli.APIClient, input string) (resolvedID, error) {
+	trimmed := strings.TrimSpace(input)
+	if trimmed != "" && !uuidRegexp.MatchString(trimmed) {
+		candidates, err := fetchProjectCandidates(ctx, client)
+		if err != nil {
+			return resolvedID{}, fmt.Errorf("resolve project: %w", err)
+		}
+		if match, ok, err := matchProjectTitle(candidates, trimmed); err != nil {
+			return resolvedID{}, err
+		} else if ok {
+			return match, nil
+		}
+	}
 	return resolveIDByPrefix(ctx, client, "project", input, fetchProjectCandidates)
+}
+
+// matchProjectTitle prefers an exact-case title match, then a case-insensitive
+// one; more than one match at the winning level is ambiguous.
+func matchProjectTitle(candidates []idCandidate, title string) (resolvedID, bool, error) {
+	for _, exact := range []bool{true, false} {
+		var matches []idCandidate
+		for _, c := range candidates {
+			if c.ID == "" {
+				continue
+			}
+			if (exact && c.Display == title) || (!exact && strings.EqualFold(c.Display, title)) {
+				matches = append(matches, c)
+			}
+		}
+		switch len(matches) {
+		case 0:
+			continue
+		case 1:
+			return resolvedID{ID: matches[0].ID, Display: matches[0].Display}, true, nil
+		default:
+			return resolvedID{}, false, ambiguousIDPrefixError("project", title, matches)
+		}
+	}
+	return resolvedID{}, false, nil
 }
 
 func fetchProjectCandidates(ctx context.Context, client *cli.APIClient) ([]idCandidate, error) {
