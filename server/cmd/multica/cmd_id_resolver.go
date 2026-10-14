@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/url"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -364,9 +365,16 @@ func resolveProjectID(ctx context.Context, client *cli.APIClient, input string) 
 		} else if ok {
 			return match, nil
 		}
+		// Not hex, so it can't be an ID prefix either: say no title matched
+		// instead of the prefix path's "only hex characters" complaint.
+		if !hexPrefixRegexp.MatchString(trimmed) {
+			return resolvedID{}, fmt.Errorf("no project titled %q", trimmed)
+		}
 	}
 	return resolveIDByPrefix(ctx, client, "project", input, fetchProjectCandidates)
 }
+
+var hexPrefixRegexp = regexp.MustCompile(`^[0-9a-fA-F-]+$`)
 
 // matchProjectTitle prefers an exact-case title match, then a case-insensitive
 // one; more than one match at the winning level is ambiguous.
