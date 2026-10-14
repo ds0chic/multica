@@ -116,14 +116,22 @@ import { useIssueLimitUpgradePrompt } from "./use-issue-limit-upgrade-prompt";
 // property toolbar without reflowing anything: collapsed it is 0px (the flex-1
 // editor absorbs the delta), and it expands only once the predicate resolves,
 // animating straight to the correct copy.
+//
+// When a run would start, the row also carries a "Don't start yet" switch so
+// the issue can be created assigned but parked, the same choice the
+// assignment confirm dialog offers for existing issues.
 function CreateRunHint({
   assigneeType,
   assigneeId,
   status,
+  held,
+  onHeldChange,
 }: {
   assigneeType?: IssueAssigneeType;
   assigneeId?: string;
   status: IssueStatus;
+  held: boolean;
+  onHeldChange: (held: boolean) => void;
 }) {
   const { t } = useT("modals");
   const { getActorName } = useActorName();
@@ -154,6 +162,10 @@ function CreateRunHint({
     avatarType = assigneeType ?? "agent";
     avatarId = assigneeId;
     text = t(($) => $.run_confirm.create_parked);
+  } else if (held) {
+    avatarType = assigneeType ?? "agent";
+    avatarId = assigneeId;
+    text = t(($) => $.run_confirm.create_held);
   } else if (isSquad) {
     avatarType = "squad";
     avatarId = assigneeId;
@@ -190,6 +202,17 @@ function CreateRunHint({
             />
           )}
           <span className="truncate">{text}</span>
+          {willStart && (
+            <label className="ml-auto flex shrink-0 items-center gap-1.5 cursor-pointer select-none">
+              <Switch
+                size="sm"
+                checked={held}
+                onCheckedChange={onHeldChange}
+                tabIndex={ready ? undefined : -1}
+              />
+              {t(($) => $.run_confirm.dont_start)}
+            </label>
+          )}
         </div>
       </div>
     </div>
@@ -412,6 +435,9 @@ export function ManualCreatePanel({
     start_date: manualFields.includes("start_date") || startDate !== null || startDatePickerOpen,
   };
 
+  // "Don't start yet" on the run hint. Kept across "create another" like the
+  // assignee, so a batch of parked issues needs one toggle.
+  const [holdRun, setHoldRun] = useState(false);
   const createIssueMutation = useCreateIssue();
   const createCommentSubIssueMutation = useCreateCommentSubIssue();
   const updateIssueMutation = useUpdateIssue();
@@ -510,6 +536,7 @@ export function ManualCreatePanel({
               ...(Object.keys(propertyValues).length > 0 ? { properties: propertyValues } : {}),
               stage: parentIssueId && stage != null ? stage : undefined,
               project_id: projectId,
+              ...(holdRun ? { suppress_run: true } : {}),
             },
           },
         });
@@ -535,6 +562,7 @@ export function ManualCreatePanel({
           // Stage is only meaningful for a sub-issue (relative to its siblings).
           stage: parentIssueId && stage != null ? stage : undefined,
           project_id: projectId,
+          ...(holdRun ? { suppress_run: true } : {}),
         });
       }
 
@@ -994,7 +1022,13 @@ export function ManualCreatePanel({
 
             {/* Pre-trigger preview — a passive caption above the toolbar; reveals
                 when an agent assignee will pick the issue up. */}
-            <CreateRunHint assigneeType={assigneeType} assigneeId={assigneeId} status={status} />
+            <CreateRunHint
+              assigneeType={assigneeType}
+              assigneeId={assigneeId}
+              status={status}
+              held={holdRun}
+              onHeldChange={setHoldRun}
+            />
 
             {/* Property toolbar — each field renders per the Settings → Preferences → Issue creation
                 selection (see showField above). */}

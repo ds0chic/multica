@@ -847,7 +847,40 @@ func newIssueCreateTestCmd() *cobra.Command {
 	cmd.Flags().StringSlice("attachment", nil, "")
 	cmd.Flags().StringSlice("attachment-id", nil, "")
 	cmd.Flags().StringArray("property", nil, "")
+	cmd.Flags().Bool("no-start", false, "")
 	return cmd
+}
+
+func TestRunIssueCreateNoStartSendsSuppressRun(t *testing.T) {
+	t.Chdir(t.TempDir())
+	var createBody map[string]any
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/api/issues":
+			if err := json.NewDecoder(r.Body).Decode(&createBody); err != nil {
+				t.Errorf("decode create body: %v", err)
+			}
+			json.NewEncoder(w).Encode(map[string]any{
+				"id": "issue-1", "identifier": "MUL-1", "title": "Held", "status": "todo", "priority": "none",
+			})
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer srv.Close()
+	t.Setenv("MULTICA_SERVER_URL", srv.URL)
+	t.Setenv("MULTICA_WORKSPACE_ID", "ws-1")
+	t.Setenv("MULTICA_TOKEN", "mat_test-token")
+
+	cmd := newIssueCreateTestCmd()
+	_ = cmd.Flags().Set("title", "Held")
+	_ = cmd.Flags().Set("no-start", "true")
+	if err := runIssueCreate(cmd, nil); err != nil {
+		t.Fatalf("runIssueCreate: %v", err)
+	}
+	if got := createBody["suppress_run"]; got != true {
+		t.Fatalf("suppress_run = %#v, want true", got)
+	}
 }
 
 func TestRunIssueCreatePropertiesFailClosedBeforePost(t *testing.T) {

@@ -222,12 +222,11 @@ vi.mock("@multica/core/issues/queries", () => ({
 // CreateRunHint's pre-trigger preview + actor-name lookup are exercised in
 // their own suites; here we only need the create form to render without query
 // infra, so stub them to the inert "no run will start" state.
+const mockTriggerPreview = vi.hoisted(() => ({
+  current: { triggers: [] as { agent_id: string }[], totalCount: 0, isLoading: false },
+}));
 vi.mock("../issues/hooks/use-issue-trigger-preview", () => ({
-  useIssueTriggerPreview: () => ({
-    triggers: [],
-    totalCount: 0,
-    isLoading: false,
-  }),
+  useIssueTriggerPreview: () => mockTriggerPreview.current,
 }));
 
 vi.mock("@multica/core/workspace/hooks", () => ({
@@ -578,8 +577,8 @@ vi.mock("@multica/ui/components/ui/switch", () => ({
     checked: boolean;
     onCheckedChange: (v: boolean) => void;
   }) => (
+    // Named by the wrapping <label>, like the real Switch.
     <input
-      aria-label="Create another"
       type="checkbox"
       checked={checked}
       onChange={(e) => onCheckedChange(e.target.checked)}
@@ -626,6 +625,7 @@ function renderModal(element: React.ReactElement) {
 describe("CreateIssueModal", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockTriggerPreview.current = { triggers: [], totalCount: 0, isLoading: false };
     mockQuickCreateStore.keepOpen = false;
     mockCreateSettingsStore.manualCreateFields = DEFAULT_MANUAL_FIELDS;
     mockSetKeepOpen.mockImplementation((v: boolean) => {
@@ -760,6 +760,36 @@ describe("CreateIssueModal", () => {
 
     expect(mockPush).toHaveBeenCalledWith("/ws-test/issues/issue-123");
     expect(mockToastDismiss).toHaveBeenCalledWith("toast-1");
+  });
+
+  it("creates an agent-assigned issue without starting it when Don't start yet is on", async () => {
+    const user = userEvent.setup();
+    mockDraftStore.draft.manual.assigneeType = "agent";
+    mockDraftStore.draft.manual.assigneeId = "agent-1";
+    mockTriggerPreview.current = {
+      triggers: [{ agent_id: "agent-1" }],
+      totalCount: 1,
+      isLoading: false,
+    };
+
+    renderModal(<CreateIssueModal onClose={vi.fn()} />);
+
+    fireEvent.change(screen.getByPlaceholderText("Issue title"), {
+      target: { value: "Park this for later" },
+    });
+    await user.click(screen.getByRole("checkbox", { name: "Don't start yet" }));
+    expect(screen.getByText("Assigned — won't start for now.")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Create Issue" }));
+
+    await waitFor(() =>
+      expect(mockCreateIssue).toHaveBeenCalledWith(
+        expect.objectContaining({
+          assignee_type: "agent",
+          assignee_id: "agent-1",
+          suppress_run: true,
+        }),
+      ),
+    );
   });
 
   it("forwards selected labels in the create payload so they attach in the same transaction", async () => {
