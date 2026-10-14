@@ -47,11 +47,15 @@ type AutopilotResponse struct {
 	PauseReason        *string `json:"pause_reason"`
 	ExecutionMode      string  `json:"execution_mode"`
 	IssueTitleTemplate *string `json:"issue_title_template"`
-	CreatedByType      string  `json:"created_by_type"`
-	CreatedByID        string  `json:"created_by_id"`
-	LastRunAt          *string `json:"last_run_at"`
-	CreatedAt          string  `json:"created_at"`
-	UpdatedAt          string  `json:"updated_at"`
+	// Model and ThinkingLevel override the assignee agent's saved values for
+	// the runs this autopilot starts. Null means "use the agent's setting".
+	Model         *string `json:"model"`
+	ThinkingLevel *string `json:"thinking_level"`
+	CreatedByType string  `json:"created_by_type"`
+	CreatedByID   string  `json:"created_by_id"`
+	LastRunAt     *string `json:"last_run_at"`
+	CreatedAt     string  `json:"created_at"`
+	UpdatedAt     string  `json:"updated_at"`
 
 	// List-endpoint-only derived fields (absent on the detail/create/update
 	// responses and on older servers — clients must treat them as optional).
@@ -210,6 +214,8 @@ func autopilotToResponse(a db.Autopilot, subscribers []db.AutopilotSubscriber) A
 		PauseReason:        textToPtr(a.PauseReason),
 		ExecutionMode:      a.ExecutionMode,
 		IssueTitleTemplate: textToPtr(a.IssueTitleTemplate),
+		Model:              textToPtr(a.Model),
+		ThinkingLevel:      textToPtr(a.ThinkingLevel),
 		CreatedByType:      a.CreatedByType,
 		CreatedByID:        uuidToString(a.CreatedByID),
 		LastRunAt:          timestampToPtr(a.LastRunAt),
@@ -366,6 +372,8 @@ type CreateAutopilotRequest struct {
 	AssigneeID         string            `json:"assignee_id"`
 	ExecutionMode      string            `json:"execution_mode"`
 	IssueTitleTemplate *string           `json:"issue_title_template"`
+	Model              *string           `json:"model"`
+	ThinkingLevel      *string           `json:"thinking_level"`
 	Subscribers        []SubscriberInput `json:"subscribers"`
 }
 
@@ -378,6 +386,11 @@ type UpdateAutopilotRequest struct {
 	Status             *string `json:"status"`
 	ExecutionMode      *string `json:"execution_mode"`
 	IssueTitleTemplate *string `json:"issue_title_template"`
+	// Model / ThinkingLevel: present replaces the value ("" or null clears it),
+	// absent keeps it. Retargeting the assignee without sending them clears
+	// both, since model ids are per runtime.
+	Model         *string `json:"model"`
+	ThinkingLevel *string `json:"thinking_level"`
 	// Wholesale replacement when present; omit to leave subscribers untouched.
 	Subscribers []SubscriberInput `json:"subscribers"`
 }
@@ -898,6 +911,11 @@ func (h *Handler) CreateAutopilot(w http.ResponseWriter, r *http.Request) {
 	if !h.validateAutopilotAssigneeForSave(w, r, qtx, assigneeType, assigneeUUID, wsUUID, true) {
 		return
 	}
+	runModel, runThinking, ok := h.resolveAutopilotRunDefaults(w, r, qtx, assigneeType, assigneeUUID, wsUUID,
+		optionalString(req.Model), optionalString(req.ThinkingLevel))
+	if !ok {
+		return
+	}
 
 	autopilot, err := qtx.CreateAutopilot(r.Context(), db.CreateAutopilotParams{
 		WorkspaceID:        wsUUID,
@@ -915,6 +933,17 @@ func (h *Handler) CreateAutopilot(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to create autopilot")
 		return
+	}
+	if runModel.Valid || runThinking.Valid {
+		autopilot, err = qtx.SetAutopilotRunDefaults(r.Context(), db.SetAutopilotRunDefaultsParams{
+			ID:            autopilot.ID,
+			Model:         runModel,
+			ThinkingLevel: runThinking,
+		})
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, "failed to create autopilot")
+			return
+		}
 	}
 
 	// Creating an autopilot IS a substantive publish: append rule-version v1 with
@@ -1187,6 +1216,32 @@ func (h *Handler) UpdateAutopilot(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Model ids and effort tokens belong to the assignee's runtime, so a
+	// retarget that does not restate them drops them rather than carrying a
+	// value the new agent may not understand.
+	_, modelSent := rawFields["model"]
+	_, thinkingSent := rawFields["thinking_level"]
+	retargeted := nextType != prev.AssigneeType || uuidToString(nextID) != uuidToString(prev.AssigneeID)
+	writeRunDefaults := modelSent || thinkingSent || (retargeted && (prev.Model.Valid || prev.ThinkingLevel.Valid))
+	var runModel, runThinking pgtype.Text
+	if writeRunDefaults {
+		nextModel, nextThinking := "", ""
+		if !retargeted {
+			nextModel, nextThinking = prev.Model.String, prev.ThinkingLevel.String
+		}
+		if modelSent {
+			nextModel = optionalString(req.Model)
+		}
+		if thinkingSent {
+			nextThinking = optionalString(req.ThinkingLevel)
+		}
+		var ok bool
+		runModel, runThinking, ok = h.resolveAutopilotRunDefaults(w, r, qtx, nextType, nextID, prev.WorkspaceID, nextModel, nextThinking)
+		if !ok {
+			return
+		}
+	}
+
 	// Assignment locks come first. Runtime teardown and squad leader changes
 	// also lock Agent/Squad before they update matching Autopilot rows; keeping
 	// that global order prevents an Agent↔Autopilot deadlock.
@@ -1215,6 +1270,17 @@ func (h *Handler) UpdateAutopilot(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to update autopilot")
 		return
+	}
+	if writeRunDefaults {
+		autopilot, err = qtx.SetAutopilotRunDefaults(r.Context(), db.SetAutopilotRunDefaultsParams{
+			ID:            autopilot.ID,
+			Model:         runModel,
+			ThinkingLevel: runThinking,
+		})
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, "failed to update autopilot")
+			return
+		}
 	}
 
 	// A substantive change (target / enabled-state / execution mode) republishes the

@@ -295,6 +295,7 @@
     "toast_update_failed": "更新自动化失败",
     "section_agent": "智能体",
     "section_assignee": "执行方",
+    "section_run_model": "模型与思考",
     "select_agent": "选择智能体",
     "select_assignee": "选择智能体或小队",
     "section_project": "关联项目",

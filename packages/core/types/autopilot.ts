@@ -37,6 +37,11 @@ export interface Autopilot {
   pause_reason?: string | null;
   execution_mode: AutopilotExecutionMode;
   issue_title_template: string | null;
+  // Model / thinking level for the runs this autopilot starts, overriding the
+  // assignee agent's saved values. Null or absent (older servers) means
+  // "use the agent's own setting".
+  model?: string | null;
+  thinking_level?: string | null;
   created_by_type: string;
   created_by_id: string;
   last_run_at: string | null;
@@ -163,6 +168,8 @@ export interface CreateAutopilotRequest {
   assignee_id: string;
   execution_mode: AutopilotExecutionMode;
   issue_title_template?: string;
+  model?: string;
+  thinking_level?: string;
   subscribers?: AutopilotSubscriberInput[];
 }
 
@@ -177,6 +184,10 @@ export interface UpdateAutopilotRequest {
   status?: AutopilotStatus;
   execution_mode?: AutopilotExecutionMode;
   issue_title_template?: string | null;
+  // "" or null clears back to the agent's own setting. A retarget that omits
+  // them clears both on the server.
+  model?: string | null;
+  thinking_level?: string | null;
   // When present, fully replaces the autopilot's subscriber template;
   // omit to leave it untouched.
   subscribers?: AutopilotSubscriberInput[];

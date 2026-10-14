@@ -81,6 +81,31 @@ UPDATE autopilot SET
 WHERE id = $1
 RETURNING *;
 
+-- name: SetAutopilotRunDefaults :one
+-- Writes the per-autopilot model / thinking-level pair wholesale; NULL clears
+-- a value back to "use the agent's own setting".
+UPDATE autopilot SET
+    model = sqlc.narg('model'),
+    thinking_level = sqlc.narg('thinking_level')
+WHERE id = $1
+RETURNING *;
+
+-- name: GetAutopilotRunDefaultsForTask :one
+-- Resolves the model / thinking-level defaults of the autopilot a task belongs
+-- to: through its autopilot run (run_only) or through the issue the autopilot
+-- created. Only applies when the task runs the autopilot's own assignee agent,
+-- so another agent mentioned on that issue keeps its own settings.
+SELECT a.model, a.thinking_level
+FROM autopilot a
+WHERE a.assignee_type = 'agent'
+  AND a.assignee_id = sqlc.arg('agent_id')::uuid
+  AND (a.model IS NOT NULL OR a.thinking_level IS NOT NULL)
+  AND a.id = COALESCE(
+    (SELECT r.autopilot_id FROM autopilot_run r WHERE r.id = sqlc.narg('autopilot_run_id')::uuid),
+    (SELECT i.origin_id FROM issue i
+     WHERE i.id = sqlc.narg('issue_id')::uuid AND i.origin_type = 'autopilot')
+  );
+
 -- name: ArchiveAutopilot :exec
 UPDATE autopilot
 SET status = 'archived', pause_reason = NULL, updated_at = now()

@@ -295,6 +295,7 @@
     "toast_update_failed": "オートパイロットを更新できませんでした",
     "section_agent": "エージェント",
     "section_assignee": "担当者",
+    "section_run_model": "モデルと思考",
     "select_agent": "エージェントを選択",
     "select_assignee": "エージェントまたはスクワッドを選択",
     "section_project": "プロジェクト",

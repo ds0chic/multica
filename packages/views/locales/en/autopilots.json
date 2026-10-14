@@ -295,6 +295,7 @@
     "toast_update_failed": "Failed to update autopilot",
     "section_agent": "Agent",
     "section_assignee": "Assignee",
+    "section_run_model": "Model and thinking",
     "select_agent": "Select agent",
     "select_assignee": "Select agent or squad",
     "section_project": "Project",

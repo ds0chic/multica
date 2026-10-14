@@ -295,6 +295,7 @@
     "toast_update_failed": "오토파일럿을 업데이트하지 못했습니다",
     "section_agent": "에이전트",
     "section_assignee": "담당자",
+    "section_run_model": "모델 및 추론",
     "select_agent": "에이전트 선택",
     "select_assignee": "에이전트 또는 스쿼드 선택",
     "section_project": "프로젝트",
