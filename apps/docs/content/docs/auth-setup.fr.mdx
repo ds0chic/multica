@@ -47,7 +47,7 @@ Modes de connexion courants :
 | STARTTLS | `SMTP_PORT=587` ; passe à TLS par défaut lorsque le serveur le prend en charge |
 | TLS implicite | `SMTP_PORT=465`, ou définissez explicitement `SMTP_TLS=implicit` |
 
-Si `SMTP_FROM_EMAIL` n'est pas défini, il se rabat sur `RESEND_FROM_EMAIL`. Avec une autorité de certification privée ou des certificats auto-signés, vous devez ajouter l'autorité de certification au magasin de confiance du conteneur ; `SMTP_TLS_INSECURE=true` désactive la vérification des certificats et ne doit être utilisé que temporairement, sur un réseau interne de confiance.
+Si `SMTP_FROM_EMAIL` n'est pas défini, il se rabat sur un `RESEND_FROM_EMAIL` personnalisé, puis sur `SMTP_USERNAME` s'il s'agit d'une adresse e-mail. La valeur par défaut `noreply@multica.ai` n'est jamais utilisée pour SMTP ; sans expéditeur utilisable, l'envoi échoue avec une erreur nommant le réglage manquant. Avec une autorité de certification privée ou des certificats auto-signés, vous devez ajouter l'autorité de certification au magasin de confiance du conteneur ; `SMTP_TLS_INSECURE=true` désactive la vérification des certificats et ne doit être utilisé que temporairement, sur un réseau interne de confiance.
 
 Certains relais stricts exigent aussi un nom EHLO valide :
 

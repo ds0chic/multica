@@ -229,6 +229,20 @@ func TestNewEmailService_FromEmailResolution(t *testing.T) {
 			want:         "resend@example.com",
 		},
 		{
+			name:         "smtp mode ignores the shipped resend placeholder and uses the login address",
+			smtpHost:     "smtp.example.com",
+			smtpUsername: "me@example.com",
+			resendFrom:   "noreply@multica.ai",
+			want:         "me@example.com",
+		},
+		{
+			name:         "smtp mode with only a placeholder and a non-address login has no sender",
+			smtpHost:     "smtp.example.com",
+			smtpUsername: "apikey",
+			resendFrom:   "noreply@multica.ai",
+			want:         "",
+		},
+		{
 			name: "default",
 			want: "noreply@multica.ai",
 		},

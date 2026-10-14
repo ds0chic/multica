@@ -111,18 +111,31 @@ func smtpAuthWithFallback(c smtpAuthClient, host, username, password string) (bo
 	return true, plainErr
 }
 
+// defaultFromEmail is the Resend-mode sender when RESEND_FROM_EMAIL is unset.
+const defaultFromEmail = "noreply@multica.ai"
+
 func resolveFromEmail(smtpHost string) string {
 	resendFrom := strings.TrimSpace(os.Getenv("RESEND_FROM_EMAIL"))
 	if smtpHost == "" {
 		if resendFrom != "" {
 			return resendFrom
 		}
-		return "noreply@multica.ai"
+		return defaultFromEmail
 	}
 	if smtpFrom := strings.TrimSpace(os.Getenv("SMTP_FROM_EMAIL")); smtpFrom != "" {
 		return smtpFrom
 	}
-	return resendFrom
+	// The shipped RESEND_FROM_EMAIL default is a Resend placeholder, not an
+	// address the SMTP account may send as; mail from a domain the relay does
+	// not own is rejected or lands in spam. Prefer the login address, and with
+	// neither, leave the sender empty so sendSMTP fails with a clear message.
+	if resendFrom != "" && resendFrom != defaultFromEmail {
+		return resendFrom
+	}
+	if user := strings.TrimSpace(os.Getenv("SMTP_USERNAME")); strings.Contains(user, "@") {
+		return user
+	}
+	return ""
 }
 
 func (s *EmailService) openSMTPClient() (*smtp.Client, error) {

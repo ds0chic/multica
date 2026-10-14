@@ -47,7 +47,7 @@ SMTP_FROM_EMAIL=noreply@example.com
 | STARTTLS | `SMTP_PORT=587`，默认会在服务器支持时升级 TLS |
 | 隐式 TLS | `SMTP_PORT=465`，或显式设置 `SMTP_TLS=implicit` |
 
-如果没有设置 `SMTP_FROM_EMAIL`，会回退到 `RESEND_FROM_EMAIL`。私有 CA 或自签证书需要把 CA 加入容器信任库；`SMTP_TLS_INSECURE=true` 会跳过证书校验，只应在可信内网中临时使用。
+如果没有设置 `SMTP_FROM_EMAIL`，会依次回退到自定义的 `RESEND_FROM_EMAIL`、邮箱地址形式的 `SMTP_USERNAME`。默认的 `noreply@multica.ai` 不会用于 SMTP；没有可用发件人时，发送会报错并指出缺少的设置。私有 CA 或自签证书需要把 CA 加入容器信任库；`SMTP_TLS_INSECURE=true` 会跳过证书校验，只应在可信内网中临时使用。
 
 有些严格的 relay 还要求合法的 EHLO 名称：
 
