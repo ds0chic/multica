@@ -42,6 +42,7 @@ trap 'rm -f "$tmp_env"; rm -rf "$tmp_dir"' EXIT
 sed 's/^FRONTEND_PORT=.*/FRONTEND_PORT=3100/' .env.example >"$tmp_env"
 printf '\nBACKEND_PORT=9100\nSMTP_FROM_EMAIL=multica@example.com\n' >>"$tmp_env"
 printf 'MULTICA_LLM_API_KEY=llm-key-from-env\nMULTICA_LLM_BASE_URL=http://gateway.example/v1\nMULTICA_LLM_DEFAULT_MODEL=model-from-env\nMULTICA_LLM_MAX_RETRIES=3\n' >>"$tmp_env"
+printf 'AUTH_TOKEN_TTL=7776000\nRATE_LIMIT_TRUSTED_PROXIES=127.0.0.1/32\nREALTIME_METRICS_TOKEN=metrics-token\n' >>"$tmp_env"
 printf 'DATABASE_REPLICA_URL=postgres://reader:secret@replica.example.com:5432/multica?sslmode=require\nDATABASE_REPLICA_MAX_CONNS=12\nDATABASE_REPLICA_MIN_CONNS=1\n' >>"$tmp_env"
 
 config="$(
@@ -79,6 +80,12 @@ require_config "$config" 'MULTICA_LLM_API_KEY: llm-key-from-env'
 require_config "$config" 'MULTICA_LLM_BASE_URL: http://gateway.example/v1'
 require_config "$config" 'MULTICA_LLM_DEFAULT_MODEL: model-from-env'
 require_config "$config" 'MULTICA_LLM_MAX_RETRIES: "3"'
+# Documented in .env.example; each must reach the backend container.
+require_config "$config" 'AUTH_TOKEN_TTL: "7776000"'
+require_config "$config" 'RATE_LIMIT_TRUSTED_PROXIES: 127.0.0.1/32'
+require_config "$config" 'REALTIME_METRICS_TOKEN: metrics-token'
+upload_config="$(LOCAL_UPLOAD_BASE_URL=https://files.example.com docker compose --env-file "$tmp_env" -f docker-compose.selfhost.yml config)"
+require_config "$upload_config" 'LOCAL_UPLOAD_BASE_URL: https://files.example.com'
 
 while IFS= read -r llm_var; do
   if ! grep -Eq "^[[:space:]]+${llm_var}: \\\$\{${llm_var}:-" docker-compose.selfhost.yml; then
